@@ -1,0 +1,210 @@
+/* ============================================================================
+   CHALK — design system tokens
+   A warm-neutral, muted-pastel system for a family of teacher tools.
+   Drop this into any project and build with the variables below.
+
+   Light is the default (:root). Dark activates on  html[data-theme="dark"]
+   (or any ancestor with [data-theme="dark"] if you want it scoped).
+
+   Colors are oklch: oklch(Lightness Chroma Hue).
+   All app accents share ~the same L and C and differ only in hue,
+   which is what makes them read as one family.
+
+   ---------------------------------------------------------------------------
+   PROVENANCE — read before syncing this file back out.
+
+   This copy carries SIX accents, named for their hue rather than for any one
+   app, so that a project can pick the ring position it wants without the token
+   name claiming ownership of it. Datebänkli's violet 300 is the accent this
+   repo actually serves; the other five are the rest of the ring.
+
+   **All six solids were darkened on 2026-07-30 and none of them is what it was.**
+   White on the accent measured 2.5–2.9 and failed WCAG AA; each solid moved to
+   the lightest L at which white clears 4.5, hue and chroma untouched. The
+   per-hue numbers and the reasoning are in HANDOFF §4ww and ARCHITECTURE §8,
+   and the accent block below repeats the short version at the site.
+
+   **Syncing this out is therefore not cosmetic.** A repo still on the old
+   lightnesses is shipping primary buttons that fail AA.
+
+   The rule this file has earned, after the ring was guessed at and missed four
+   times: **read the CSS, never the spec.** A hue is whatever the serving app
+   declares, and the only way to know it is to open that app's stylesheet.
+
+   Adding a seventh accent is a decision, not a transcription — a candidate
+   whose solid fails AA either enters failing, against everything the block
+   below stands for, or enters darkened, which changes an app's brand colour
+   without its say. Neither is free, so it is worth being deliberate about.
+
+   Two patterns, both supported: an app that **brings its own hue** declares it
+   here and aliases `--accent` to it, and an app that **reuses one** re-points
+   the `:root` alias block at the bottom without adding a token. The [data-app]
+   blocks below are the first pattern.
+   ============================================================================ */
+
+:root {
+  /* ---- Neutrals (warm paper) — LIGHT --------------------------------- */
+  --paper:        oklch(0.985 0.006 83);   /* app background            */
+  --surface:      oklch(0.998 0.003 83);   /* cards / raised surfaces   */
+  --surface-2:    oklch(0.955 0.008 83);   /* sunken / subtle fills     */
+  --line:         oklch(0.912 0.010 83);   /* hairline borders          */
+  --line-strong:  oklch(0.845 0.013 83);   /* input borders / dividers  */
+  --ink:          oklch(0.290 0.014 70);   /* primary text              */
+  --muted:        oklch(0.520 0.012 70);   /* secondary text            */
+  --faint:        oklch(0.660 0.010 70);   /* tertiary text / icons     */
+
+  --shadow:    0 1px 2px rgba(52,42,26,.05), 0 6px 20px rgba(52,42,26,.05);
+  --shadow-lg: 0 2px 4px rgba(52,42,26,.06), 0 18px 44px rgba(52,42,26,.10);
+
+  /* ---- App accents — LIGHT -------------------------------------------
+     The solids are the SAME in both modes (see the dark block); only tint and
+     ink shift. That is what makes them usable as a brand colour, and it is also
+     why the foreground on them cannot be mode-aware.
+
+     Every L below was chosen so that WHITE clears WCAG AA (4.5:1) on it, and
+     for no other reason — the hue and chroma are untouched. They used to sit at
+     0.68–0.705, where white measured 2.5–2.9 and failed AA on every primary
+     button on every accent in the ring. The exact L differs per hue because luminance at a
+     fixed OKLCH lightness does not: green carries more of it than violet, so
+     the sage accent goes furthest down (0.705 → 0.557) and plum least
+     (0.700 → 0.581).
+
+     Rasterised, not estimated. HANDOFF §4ww records the measurements and the
+     one thing this change costs: --accent as *text* on a dark background drops
+     from ~5.9 to ~3.7, so a rule that colours text with it in dark mode needs
+     --accent-ink instead. On light backgrounds it improved, from ~2.8 (failing)
+     to ~4.4.
+     -------------------------------------------------------------------- */
+  /* terracotta (hue 45) */
+  --terracotta:        oklch(0.578 0.110 45);
+  --terracotta-tint:   oklch(0.955 0.032 55);
+  --terracotta-ink:    oklch(0.500 0.120 42);
+  /* sage (hue 152) */
+  --sage:       oklch(0.557 0.088 152);
+  --sage-tint:  oklch(0.955 0.030 155);
+  --sage-ink:   oklch(0.475 0.098 152);
+  /* plum (hue 340) */
+  --plum:      oklch(0.581 0.108 340);
+  --plum-tint: oklch(0.955 0.032 338);
+  --plum-ink:  oklch(0.515 0.118 338);
+  /* slate blue (hue 255) */
+  --slate:      oklch(0.567 0.100 255);
+  --slate-tint: oklch(0.955 0.028 258);
+  --slate-ink:  oklch(0.500 0.115 258);
+  /* teal (hue 200) */
+  --teal:      oklch(0.551 0.105 200);
+  --teal-tint: oklch(0.955 0.030 202);
+  --teal-ink:  oklch(0.500 0.115 202);
+  /* violet (hue 300) — the accent this app serves */
+  --datebaenkli:      oklch(0.578 0.100 300);
+  --datebaenkli-tint: oklch(0.955 0.030 302);
+  --datebaenkli-ink:  oklch(0.500 0.115 302);
+
+  /* ---- Semantic / status — LIGHT ------------------------------------- */
+  /* positive / success — sage (same hue as the sage accent) */
+  --ok:        oklch(0.705 0.088 152);
+  --ok-tint:   oklch(0.955 0.030 155);
+  --ok-ink:    oklch(0.475 0.098 152);
+  /* caution / low-confidence — amber (hue 78) */
+  --warn:      oklch(0.760 0.100 78);
+  --warn-tint: oklch(0.958 0.034 82);
+  --warn-ink:  oklch(0.500 0.090 68);
+  /* negative / error — red (hue 26) */
+  --bad:       oklch(0.635 0.140 26);
+  --bad-tint:  oklch(0.955 0.032 30);
+  --bad-ink:   oklch(0.520 0.150 26);
+  /* neutral marker (bars, dots) */
+  --neutral:   oklch(0.760 0.012 80);
+
+  /* ---- Shape ---------------------------------------------------------- */
+  --r-sm: 9px;
+  --r:    12px;
+  --r-md: 14px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+
+  color-scheme: light;
+}
+
+/* ---- Neutrals + tints — DARK (warm ink, never pure black) ------------ */
+html[data-theme="dark"],
+[data-theme="dark"] {
+  --paper:        oklch(0.205 0.008 75);
+  --surface:      oklch(0.248 0.010 75);
+  --surface-2:    oklch(0.292 0.011 75);
+  --line:         oklch(0.335 0.012 75);
+  --line-strong:  oklch(0.410 0.014 75);
+  --ink:          oklch(0.935 0.008 83);
+  --muted:        oklch(0.705 0.011 80);
+  --faint:        oklch(0.560 0.010 80);
+
+  --shadow:    0 1px 2px rgba(0,0,0,.30), 0 8px 24px rgba(0,0,0,.36);
+  --shadow-lg: 0 2px 6px rgba(0,0,0,.34), 0 22px 52px rgba(0,0,0,.48);
+
+  /* Accent SOLIDS stay the same across modes; only tint/ink shift. */
+  --terracotta-tint:   oklch(0.340 0.052 45);
+  --terracotta-ink:    oklch(0.820 0.098 52);
+  --sage-tint:  oklch(0.335 0.044 152);
+  --sage-ink:   oklch(0.825 0.088 155);
+  --plum-tint: oklch(0.345 0.054 338);
+  --plum-ink:  oklch(0.830 0.098 338);
+  --slate-tint: oklch(0.345 0.050 255);
+  --slate-ink:  oklch(0.830 0.088 258);
+  --teal-tint: oklch(0.345 0.052 200);
+  --teal-ink:  oklch(0.832 0.092 202);
+  --datebaenkli-tint: oklch(0.345 0.052 300);
+  --datebaenkli-ink:  oklch(0.832 0.092 302);
+
+  --ok-tint:   oklch(0.335 0.044 152);
+  --ok-ink:    oklch(0.825 0.088 155);
+  --warn-tint: oklch(0.350 0.046 78);
+  --warn-ink:  oklch(0.840 0.088 82);
+  --bad-tint:  oklch(0.345 0.060 28);
+  --bad-ink:   oklch(0.820 0.110 30);
+
+  color-scheme: dark;
+}
+
+/* ----------------------------------------------------------------------------
+   PER-APP ACCENT ALIAS
+   In a single app, alias the active accent to --accent / --accent-tint /
+   --accent-ink and build components against those. Swap ONE block to re-theme
+   the whole app. (The design-system reference uses [data-app="…"] to do this
+   for the whole ring at once.)
+   ---------------------------------------------------------------------------- */
+:root { /* e.g. an app on the plum accent: */
+  --accent:      var(--plum);
+  --accent-tint: var(--plum-tint);
+  --accent-ink:  var(--plum-ink);
+}
+
+[data-app="terracotta"]  { --accent: var(--terracotta);  --accent-tint: var(--terracotta-tint);  --accent-ink: var(--terracotta-ink); }
+[data-app="sage"]        { --accent: var(--sage);        --accent-tint: var(--sage-tint);        --accent-ink: var(--sage-ink); }
+[data-app="plum"]        { --accent: var(--plum);        --accent-tint: var(--plum-tint);        --accent-ink: var(--plum-ink); }
+[data-app="slate"]       { --accent: var(--slate);       --accent-tint: var(--slate-tint);       --accent-ink: var(--slate-ink); }
+[data-app="teal"]        { --accent: var(--teal);        --accent-tint: var(--teal-tint);        --accent-ink: var(--teal-ink); }
+[data-app="datebaenkli"] { --accent: var(--datebaenkli); --accent-tint: var(--datebaenkli-tint); --accent-ink: var(--datebaenkli-ink); }
+
+/* ----------------------------------------------------------------------------
+   TYPOGRAPHY — load these in <head>:
+
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+   <link rel="stylesheet"
+     href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+   <link rel="stylesheet"
+     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block">
+   ---------------------------------------------------------------------------- */
+:root {
+  --font-ui:   "Source Sans 3", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Icon helper — Material Symbols Rounded, used as ligature text spans. */
+.mi {
+  font-family: "Material Symbols Rounded";
+  font-weight: normal; font-style: normal; line-height: 1;
+  letter-spacing: normal; text-transform: none; white-space: nowrap;
+  font-feature-settings: "liga";
+  vertical-align: middle;
+}

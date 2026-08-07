@@ -1,0 +1,15 @@
+{
+  "name": "datebaenkli-handbook-src",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Generator for docs/handbuch.html — demo data, screenshots, arrow overlays.",
+  "scripts": {
+    "shots": "bash refresh.sh",
+    "build": "node build.mjs",
+    "check": "node check.mjs && node mobile.mjs"
+  },
+  "dependencies": {
+    "puppeteer-core": "^25.4.0"
+  }
+}

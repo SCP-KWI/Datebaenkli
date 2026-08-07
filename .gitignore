@@ -1,0 +1,24 @@
+# secrets
+.env
+
+# Personal server crib sheet (domains, host paths, installed services).
+# Not project code, and this repo is public — keep it local.
+setupReference
+
+# postgres data volume (bind-mounted next to the compose file on the server)
+pgdata/
+
+# dumps
+backups/
+archive/
+
+# node
+node_modules/
+app/dist/
+*.log
+npm-debug.log*
+
+# editors / os
+.DS_Store
+.idea/
+.vscode/

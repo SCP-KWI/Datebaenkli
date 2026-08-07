@@ -1,0 +1,203 @@
+services:
+  datebaenkli-db:
+    image: postgres:17-alpine
+    container_name: datebaenkli-db
+    restart: unless-stopped
+    # `cap_drop: ALL` **alone breaks this container** and the five `cap_add`
+    # lines are not decoration. The postgres entrypoint starts as root, chowns
+    # the data directory and then `su-exec`s down to `postgres`, so dropping
+    # everything makes it exit 1 on the first line with
+    # `chown: /var/lib/postgresql/data: Operation not permitted`. Measured, not
+    # reasoned about — an earlier version of this comment claimed the entrypoint
+    # ran "before the kernel capability set matters", which is exactly backwards.
+    #
+    # The five are the minimum that starts: CHOWN/FOWNER/DAC_OVERRIDE for the
+    # data directory, SETUID/SETGID for the drop to `postgres`. Everything else
+    # Docker grants by default — NET_RAW, MKNOD, SYS_CHROOT and the rest — is
+    # gone. Verified by running the image with exactly these flags: it accepts
+    # connections and `ps` shows the postmaster as `postgres`.
+    #
+    # NOT `read_only: true`: this one writes its data directory, its WAL and its
+    # sockets, and pretending otherwise would need three tmpfs mounts to buy
+    # nothing. The app container is the one where that is worth doing.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: postgres
+      # consumed by db/init/00-bootstrap.sh on first start only
+      DBK_APP_DB_PASSWORD: ${DBK_APP_DB_PASSWORD:?DBK_APP_DB_PASSWORD is required}
+      # The cluster locale, and so template0's. The two application databases
+      # deliberately depart from it: 00-bootstrap.sh creates both with ICU
+      # `de-CH`, because C sorts 'Bühler' after 'Zimmermann'. Leave this as it
+      # is — it keeps initdb deterministic across image updates, and the ICU
+      # provider makes it irrelevant to sort order anyway.
+      LANG: C.UTF-8
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    # NOTE: no `ports:` on purpose. The database is reachable only from the
+    # app container over datebaenkli_internal. See docs/ARCHITECTURE.md §4.
+    networks:
+      - datebaenkli_internal
+    command:
+      - postgres
+      # Tuned for a host with several cores and ~8 GB+ of RAM to spare. On a
+      # smaller box drop shared_buffers to 512MB and effective_cache_size to
+      # 1GB — see docs/ARCHITECTURE.md §7 for the sizing.
+      - -c
+      - shared_buffers=1GB
+      - -c
+      - effective_cache_size=3GB
+      - -c
+      - work_mem=8MB
+      - -c
+      - max_connections=200
+      # temp_file_limit is SUSET, so it cannot be set per-role by dbk_app.
+      # Setting it cluster-wide is the whole point: it caps a runaway student
+      # query's spill-to-disk without needing superuser at provisioning time.
+      - -c
+      - temp_file_limit=256MB
+      - -c
+      - max_parallel_workers_per_gather=2
+      - -c
+      - log_min_duration_statement=2000
+      - -c
+      - log_lock_waits=on
+    # `work_mem` above is a default, NOT a boundary: it is USERSET, so a student
+    # types `SET work_mem = '6GB'` (and `SET hash_mem_multiplier = 100`, also
+    # USERSET) and Postgres offers no way to forbid it. `temp_file_limit` does
+    # not help — it caps spill to *disk*, not resident memory — and `work_mem`
+    # is charged per sort/hash node per parallel worker, so one statement
+    # multiplies it several times over before any other rail notices.
+    #
+    # A cgroup ceiling is therefore the only actual control, and this is it.
+    # 6g sits well clear of shared_buffers=1GB and leaves the app container room
+    # on the 14 GB box. `memswap_limit` must equal it: Docker otherwise allows
+    # swap up to 2× the limit, and the container simply swaps its way to the
+    # same size while taking the host's I/O down with it.
+    #
+    # This bounds the blast radius, it does not prevent the attack: the kernel
+    # OOM-kills inside the cgroup, Postgres crash-recovers and every session in
+    # every class drops. That is the contained outcome — the alternative is the
+    # OOM killer choosing among everything else on the host.
+    mem_limit: 6g
+    memswap_limit: 6g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  datebaenkli-app:
+    build:
+      # The repo root, not `./app`, since `/handbuch` was added: the handbook is
+      # `docs/handbuch.html` and there is deliberately only that one copy, so the
+      # build has to be able to see outside `app/`. `.dockerignore` at the root
+      # is what keeps the context small (pgdata, .git, node_modules, dist, and
+      # all of docs/ except the one file). `app/Dockerfile`'s header has the
+      # rest, including why its WORKDIR mirrors the repo layout.
+      context: .
+      dockerfile: app/Dockerfile
+    image: datebaenkli-app:latest
+    container_name: datebaenkli-app
+    restart: unless-stopped
+    # See the db service above. This one additionally runs read-only: the image
+    # is `USER node` and the process writes nothing outside the archive mount,
+    # so the only thing it needs a writable path for is /tmp — which
+    # `provision.ts` uses for the `pg_restore --use-list` scratch file. Giving
+    # it a tmpfs rather than a writable layer means a compromised process cannot
+    # leave anything behind that survives a restart.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    depends_on:
+      datebaenkli-db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      PGHOST: datebaenkli-db
+      PGPORT: "5432"
+      DBK_META_DB: datebaenkli_meta
+      DBK_TEACH_DB: datebaenkli
+      DBK_APP_DB_USER: dbk_app
+      DBK_APP_DB_PASSWORD: ${DBK_APP_DB_PASSWORD:?DBK_APP_DB_PASSWORD is required}
+      DBK_SESSION_SECRET: ${DBK_SESSION_SECRET:?DBK_SESSION_SECRET is required}
+      DBK_ENCRYPTION_KEY: ${DBK_ENCRYPTION_KEY:?DBK_ENCRYPTION_KEY is required}
+      DBK_PUBLIC_URL: ${DBK_PUBLIC_URL:-https://datebaenkli.example.com}
+      DBK_STUDENT_QUOTA_MB: ${DBK_STUDENT_QUOTA_MB:-50}
+      DBK_STATEMENT_TIMEOUT: ${DBK_STATEMENT_TIMEOUT:-15s}
+      DBK_MAX_RESULT_ROWS: ${DBK_MAX_RESULT_ROWS:-1000}
+      DBK_DEFAULT_LOCALE: ${DBK_DEFAULT_LOCALE:-de}
+      DBK_SESSION_TTL_HOURS: ${DBK_SESSION_TTL_HOURS:-12}
+      # Reverse-proxy hops in front of the app. req.ip is read that many entries
+      # from the right of X-Forwarded-For, so the per-IP login limiter cannot be
+      # reset with a spoofed header. 1 = a single reverse proxy in front.
+      DBK_TRUST_PROXY_HOPS: ${DBK_TRUST_PROXY_HOPS:-1}
+      # Blank = inferred from DBK_PUBLIC_URL's scheme. Set to "false" for the
+      # TLS-less first bring-up in HANDOFF §5, or the browser will refuse the
+      # session cookie and every login will appear to succeed and then fail.
+      DBK_COOKIE_SECURE: ${DBK_COOKIE_SECURE:-}
+      # initial admin, created on first boot only if no admin exists
+      DBK_BOOTSTRAP_ADMIN_USER: ${DBK_BOOTSTRAP_ADMIN_USER:-admin}
+      # `:-` and NOT `:?`. The app tells you to blank this once you have logged
+      # in and changed the password (bootstrap.ts), and `:?` fails on empty as
+      # well as unset — so following that instruction made the *next* start
+      # refuse to come up, which in practice means the reboot weeks later.
+      # Nothing is lost by relaxing it: bootstrap.ts returns early once an admin
+      # exists, and still throws if there is no admin AND no password, which is
+      # the only case where an empty value is actually dangerous.
+      DBK_BOOTSTRAP_ADMIN_PASSWORD: ${DBK_BOOTSTRAP_ADMIN_PASSWORD:-}
+    volumes:
+      # dumps live on bulk storage rather than the fast root disk — see §7
+      #
+      # The backup directory is deliberately NOT mounted here. `db/backup.sh`
+      # writes a copy of `.env` into every run (DBK_ENCRYPTION_KEY is what makes
+      # app_user.pg_password_enc restorable), so that directory is exactly as
+      # sensitive as the secrets themselves — and nothing in the app ever read
+      # it. It was mounted read-write, under uid 1000, which is the container's
+      # `node` user: any file-read bug in the app would have yielded the session
+      # secret, both database passwords and the key that decrypts every
+      # student's Postgres password, and a write bug could have deleted all 14
+      # retained runs. Backups are taken by cron on the host, which is where
+      # that job belongs. Do not add it back.
+      - ${DBK_ARCHIVE_DIR:-/mnt/bulk/datebaenkli/archive}:/var/lib/datebaenkli/archive
+    networks:
+      - datebaenkli_internal
+      - proxy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+networks:
+  # private: only these two containers. Deliberately NOT the proxy network,
+  # so nothing else on the host can reach Postgres.
+  datebaenkli_internal:
+    driver: bridge
+
+  # The network your reverse proxy already runs on — the app joins it so the
+  # proxy can reach port 3000 without publishing a host port. `external: true`
+  # means compose will not create it: it must exist already, which it does if
+  # the proxy is up. Set DBK_PROXY_NETWORK in .env to whatever `docker network
+  # ls` calls it; the default below is only a guess.
+  proxy:
+    external: true
+    name: ${DBK_PROXY_NETWORK:-proxy}

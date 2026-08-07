@@ -1,0 +1,8 @@
+{
+  "name": "Datebänkli",
+  "description": "SQL-Sandbox für Schulklassen — eigene Datenbank pro Lernende:r.",
+  "icon": "🗄️",
+  "route": "https://datebaenkli.schaffner.xyz",
+  "tags": ["KWI"],
+  "tier": "app"
+}

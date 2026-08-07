@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="de" data-app="datebaenkli">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="lesson.title">Lektion — Datebänkli</title>
+    <link rel="preload" href="/assets/fonts/source-sans-3-400-latin.woff2" as="font"
+          type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/material-symbols-rounded-400.woff2" as="font"
+          type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/assets/fonts.css" />
+    <link rel="stylesheet" href="/assets/chalk-tokens.css" />
+    <link rel="stylesheet" href="/assets/app.css" />
+    <script src="/assets/theme.js"></script>
+  </head>
+  <body data-page="lesson">
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="brand-badge mi" aria-hidden="true">database</span>
+        <span class="wordmark">Datebänkli</span>
+      </a>
+      <nav class="topbar-actions">
+        <button id="roster" data-i18n="nav.roster">Klassen</button>
+        <button id="exercises" data-i18n="nav.exercises">Übungen</button>
+        <button id="home" data-i18n="nav.overview">Übersicht</button>
+        <select id="lang" class="lang-select" aria-label="Sprache / Language">
+          <option value="de">Deutsch</option>
+          <option value="en">English</option>
+        </select>
+        <!-- No `data-i18n-attr` here on purpose: `wireThemeToggle` owns this
+             label, because it is the only thing that knows which way the toggle
+             currently points. The German below is the no-script fallback. -->
+        <button id="theme" type="button" class="icon-btn mi"
+                aria-label="Auf dunkles Design wechseln"></button>
+        <!-- The handbook. Visible unconditionally: this page is staff-only, so
+             unlike home.html there is nobody here to hide it from. New tab, and
+             no `data-i18n` — login.html has the reasons. -->
+        <a class="btn icon-btn" href="/handbuch" target="_blank" rel="noopener"
+           aria-label="Handbuch öffnen" title="Handbuch öffnen">?</a>
+      </nav>
+    </header>
+
+    <main class="page">
+      <h1 data-i18n="lesson.heading">Lektion</h1>
+      <p class="sub" id="sub">…</p>
+
+      <!-- The three controls that change what is on screen, kept together and
+           kept out of the top bar: the bar is navigation, this is the query. -->
+      <div class="controls">
+        <select id="class"></select>
+        <select id="window">
+          <option value="30" data-i18n="lesson.window_30">letzte 30 Min.</option>
+          <option value="90" selected data-i18n="lesson.window_90">letzte 90 Min.</option>
+          <option value="240" data-i18n="lesson.window_240">letzte 4 Std.</option>
+        </select>
+        <button id="refresh" data-i18n="lesson.refresh">Jetzt aktualisieren</button>
+      </div>
+
+      <div id="content"></div>
+
+      <dialog id="detail"><div id="detail-body"></div>
+        <nav class="hstack dialog-actions">
+          <button id="close" data-i18n="common.close">Schliessen</button>
+        </nav>
+      </dialog>
+
+      <!-- Split around the <em>: `i18n.js`'s apply() sets textContent, so a key
+           on the <p> would take the emphasis with it. sql.html's import dialog
+           has the same note about the same trap in its labels. -->
+      <p class="note"><span data-i18n="lesson.note_1"
+        >„Angemeldet“ heisst: eine gültige Sitzung — nicht unbedingt jemand am
+        Platz. Wer über dem Speicherlimit ist, wird bei jedem schreibenden Befehl
+        abgewiesen; solche Versuche erscheinen bewusst </span
+        ><em data-i18n="lesson.note_em">nicht</em><span data-i18n="lesson.note_2"
+        > in der Liste der Befehle, darum steht das Limit hier daneben.</span></p>
+    </main>
+
+    <footer class="footer">
+      <span class="footer-version" id="version"></span>
+      <span class="footer-contact"><span data-i18n="footer.contact">Fragen oder Probleme:</span>
+        <a href="mailto:philip.schaffner@kwi.ch">philip.schaffner@kwi.ch</a></span>
+    </footer>
+
+    <script type="module" src="/assets/lesson.js"></script>
+  </body>
+</html>

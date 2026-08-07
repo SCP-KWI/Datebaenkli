@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="de" data-app="datebaenkli">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="ex.title">Übungen — Datebänkli</title>
+    <link rel="preload" href="/assets/fonts/source-sans-3-400-latin.woff2" as="font"
+          type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/ibm-plex-mono-400-latin.woff2" as="font"
+          type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/material-symbols-rounded-400.woff2" as="font"
+          type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/assets/fonts.css" />
+    <link rel="stylesheet" href="/assets/chalk-tokens.css" />
+    <link rel="stylesheet" href="/assets/app.css" />
+    <script src="/assets/theme.js"></script>
+  </head>
+  <body data-page="exercises">
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="brand-badge mi" aria-hidden="true">database</span>
+        <span class="wordmark">Datebänkli</span>
+      </a>
+      <nav class="topbar-actions">
+        <button id="sql" data-i18n="nav.sql">SQL-Editor</button>
+        <button id="lesson" hidden data-i18n="nav.lesson">Lektion</button>
+        <button id="roster" hidden data-i18n="nav.roster">Klassen</button>
+        <button id="overview" data-i18n="nav.overview">Übersicht</button>
+        <select id="lang" class="lang-select" aria-label="Sprache / Language">
+          <option value="de">Deutsch</option>
+          <option value="en">English</option>
+        </select>
+        <!-- No `data-i18n-attr` here on purpose: `wireThemeToggle` owns this
+             label, because it is the only thing that knows which way the toggle
+             currently points. The German below is the no-script fallback. -->
+        <button id="theme" type="button" class="icon-btn mi"
+                aria-label="Auf dunkles Design wechseln"></button>
+        <a id="help" hidden class="btn icon-btn" href="/handbuch" target="_blank"
+           rel="noopener" aria-label="Handbuch öffnen" title="Handbuch öffnen">?</a>
+      </nav>
+    </header>
+
+    <!--
+      One page, two audiences, and only one of the two panes is ever shown.
+      `home.html` already works this way and for the same reason: the shell, the
+      nav, the footer and the language select are identical, and the alternative
+      is a seventh page that differs from this one by its middle.
+    -->
+    <main class="page">
+      <h1 data-i18n="ex.heading">Übungen</h1>
+
+      <!-- The student's list. Filled by uebungen.js. -->
+      <section id="mine" hidden>
+        <p class="sub" data-i18n="ex.mine_sub">
+          Übungen, die deine Lehrperson verteilt hat.
+        </p>
+        <div id="mineList" class="stack" data-i18n="common.loading">wird geladen …</div>
+      </section>
+
+      <!-- The teacher's half: a list on the left, one exercise open on the right. -->
+      <section id="teach" hidden>
+        <div class="ex-split">
+          <aside class="ex-list card">
+            <div class="hstack ex-list-head">
+              <h2 data-i18n="ex.yours">Deine Übungen</h2>
+              <button id="new" class="primary small" data-i18n="ex.new">Neu</button>
+            </div>
+            <div id="list" class="stack" data-i18n="common.loading">wird geladen …</div>
+          </aside>
+
+          <div id="detail" class="ex-detail">
+            <p class="note" data-i18n="ex.pick">
+              Wähle links eine Übung aus oder leg eine neue an.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!--
+      The CSV dialog, copied byte-for-byte from `sql.html`.
+
+      Copied rather than shared because `routes/pages.ts` serves every page as a
+      byte-for-byte constant and deliberately has no template engine — the same
+      argument the `<head>` block makes on all seven pages. `csv-import.js`
+      drives both copies from one implementation, and `test/pages.test.mjs`
+      asserts that this block and `sql.html`'s are identical, which is
+      `test/chalk.test.mjs`'s trick and the only thing that makes copying safe.
+      If you edit one, edit the other; the test will tell you if you did not.
+    -->
+    <dialog id="importDialog">
+      <h2 data-i18n="import.title">CSV importieren</h2>
+
+      <p>
+        <label
+          ><span data-i18n="import.file">Datei</span>
+          <input type="file" id="importFile" accept=".csv,.txt,text/csv"
+        /></label>
+      </p>
+
+      <div id="importConfig" hidden>
+        <div class="opts">
+          <label
+            ><span data-i18n="import.table">Tabellenname</span>
+            <input type="text" id="importTable"
+          /></label>
+          <label>
+            <span data-i18n="import.delimiter">Trennzeichen</span>
+            <select id="importDelimiter">
+              <option value=";" data-i18n="import.semicolon">Strichpunkt ;</option>
+              <option value="," data-i18n="import.comma">Komma ,</option>
+              <option value="&#9;" data-i18n="import.tab">Tabulator</option>
+              <option value="|" data-i18n="import.pipe">Strich |</option>
+            </select>
+          </label>
+          <label>
+            <input type="checkbox" id="importHeader" />
+            <span data-i18n="import.first_row">Erste Zeile sind Spaltennamen</span>
+          </label>
+          <label>
+            <input type="checkbox" id="importReplace" />
+            <span data-i18n="import.replace">Bestehende Tabelle ersetzen</span>
+          </label>
+        </div>
+
+        <p class="note" id="importSummary"></p>
+
+        <h3 data-i18n="import.columns">Spalten</h3>
+        <table class="cols">
+          <thead>
+            <tr>
+              <th data-i18n="import.in_file">in der Datei</th>
+              <th data-i18n="import.column_name">Spaltenname</th>
+              <th data-i18n="import.type">Datentyp</th>
+            </tr>
+          </thead>
+          <tbody id="importColumns"></tbody>
+        </table>
+
+        <h3 data-i18n="import.preview">Vorschau</h3>
+        <div id="importPreview"></div>
+      </div>
+
+      <p class="note" id="importStatus"></p>
+      <div id="importErrors" class="error"></div>
+
+      <menu>
+        <button id="importCancel" data-i18n="common.cancel">Abbrechen</button>
+        <button id="importGo" class="primary" disabled data-i18n="import.go">Importieren</button>
+      </menu>
+    </dialog>
+
+    <!--
+      Adding or editing a SQL fixture. A plain <textarea>, not CodeMirror: the
+      editor is one bundled entry point and CLAUDE.md says there is not going to
+      be a second. A teacher pasting a schema dump needs a big box, not
+      highlighting.
+    -->
+    <dialog id="sqlDialog">
+      <h2 data-i18n="ex.sql_title">SQL-Skript</h2>
+      <p>
+        <label
+          ><span data-i18n="ex.sql_label">Bezeichnung</span>
+          <input type="text" id="sqlLabel" maxlength="200"
+        /></label>
+      </p>
+      <p>
+        <label class="block"
+          ><span data-i18n="ex.sql_body">Skript</span>
+          <textarea id="sqlBody" rows="16" spellcheck="false"></textarea
+        ></label>
+      </p>
+      <p class="note" data-i18n="ex.sql_hint">
+        Läuft im Übungs-Schema jeder Lernenden. Tabellennamen ohne Schema angeben.
+      </p>
+      <p class="msg" id="sqlStatus"></p>
+      <menu>
+        <button id="sqlCancel" data-i18n="common.cancel">Abbrechen</button>
+        <button id="sqlSave" class="primary" data-i18n="common.save">Speichern</button>
+      </menu>
+    </dialog>
+
+    <!-- One student's hand-ins, opened from the teacher's list. -->
+    <dialog id="handinDialog">
+      <h2 id="handinTitle">…</h2>
+      <div id="handinBody"></div>
+      <menu>
+        <button id="handinClose" data-i18n="common.close">Schliessen</button>
+      </menu>
+    </dialog>
+
+    <footer class="footer">
+      <span class="footer-version" id="version"></span>
+      <span class="footer-contact"><span data-i18n="footer.contact">Fragen oder Probleme:</span>
+        <a href="mailto:philip.schaffner@kwi.ch">philip.schaffner@kwi.ch</a></span>
+    </footer>
+
+    <script type="module" src="/assets/uebungen.js"></script>
+  </body>
+</html>

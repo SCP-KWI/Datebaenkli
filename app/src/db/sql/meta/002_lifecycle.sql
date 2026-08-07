@@ -1,0 +1,41 @@
+-- Phase 5b — the account lifecycle (architecture §8b).
+--
+-- Two changes, and the second is a deletion on purpose.
+
+-- --- where a dump went -------------------------------------------------------
+--
+-- The one thing about an account that Postgres is NOT the source of truth for.
+--
+-- §3 refuses a `provisioned_at` column, and the reason is that `pg_roles` and
+-- `pg_namespace` already say what exists, so a flag would be a second answer to
+-- a question that already has one. That argument does not reach here: a cold
+-- account's dump is a file on a filesystem outside both databases, and
+-- `inventory()` is structurally unable to see it — the same shape of blindness
+-- that §4dd found in `pg_database.datacl`, except that here no amount of asking
+-- Postgres better would help.
+--
+-- The alternatives were globbing the archive directory for the newest
+-- `<pg_role>-*.dump` (a deleted account's dump has the identical filename shape,
+-- and an account cooled twice leaves two candidates) or reading `audit_log`
+-- detail as an index, which is fine as a trail and wrong as a lookup: it is
+-- append-only, so "where is this account's dump now" becomes "find the latest
+-- row of the right shape and hope no later row supersedes it".
+--
+-- Set when an account goes cold or deleted; cleared on the way back to active,
+-- because a restored account's dump is history and the column means *current*.
+-- It can still disagree with the disk if an operator deletes the file, which is
+-- why `restoreSchema` stats the path before trusting it.
+ALTER TABLE app_user ADD COLUMN archive_path text;
+
+-- --- one source of truth for the archive threshold ---------------------------
+--
+-- Seeded by 001 and read by nothing. Phase 5b is the first reader, and it reads
+-- `config.lifecycle.archiveAfterDays` instead — validated at import, so a bad
+-- value crashes the container on boot rather than being discovered at 03:40 by
+-- the job that acts on it. An unvalidated jsonb row with no writer and no UI is
+-- exactly the second source of truth §3 warns about, and leaving it here would
+-- let somebody edit it and reasonably expect something to happen.
+--
+-- `query_log_retention_days` stays: it also has no reader, and whoever writes
+-- that reader gets to make this decision for themselves.
+DELETE FROM setting WHERE key = 'archive_after_days';

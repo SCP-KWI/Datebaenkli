@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="de" data-app="datebaenkli">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="roster.title">Klassen — Datebänkli</title>
+    <link rel="preload" href="/assets/fonts/source-sans-3-400-latin.woff2" as="font"
+          type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/material-symbols-rounded-400.woff2" as="font"
+          type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/assets/fonts.css" />
+    <link rel="stylesheet" href="/assets/chalk-tokens.css" />
+    <link rel="stylesheet" href="/assets/app.css" />
+    <script src="/assets/theme.js"></script>
+  </head>
+  <body data-page="roster">
+    <!--
+      Every translated label with a control inside it wraps its *text* in a
+      <span>, never carrying `data-i18n` itself: `i18n.js`'s apply() sets
+      textContent, which would take the <input> or <select> with it and leave a
+      dead form field — visible only in whichever locale was swept second.
+      sql.html's import dialog says the same thing about the same trap.
+
+      The `_1` / `_2` hints below are the other half of it: a sentence with an
+      inline <code> or <strong> cannot be one key, so it is split at the tag.
+    -->
+    <!--
+      The top bar lives *inside* `#main`, which reads as a mistake until you
+      check `roster.js`'s `showSlips()`: it hides `#main` wholesale to put the
+      slips on screen, and the language control must not be reachable from that
+      view — the note above `#slips-view` says why, and one reload there loses
+      thirty passwords. Nesting it means that guarantee costs no JavaScript and
+      cannot drift out of step with the toggle.
+    -->
+    <div id="main">
+      <header class="topbar">
+        <a class="brand" href="/">
+          <span class="brand-badge mi" aria-hidden="true">database</span>
+          <span class="wordmark">Datebänkli</span>
+        </a>
+        <nav class="topbar-actions">
+          <button id="lesson" data-i18n="nav.lesson">Lektion</button>
+          <button id="exercises" data-i18n="nav.exercises">Übungen</button>
+          <button id="home" data-i18n="nav.overview">Übersicht</button>
+          <select id="lang" class="lang-select" aria-label="Sprache / Language">
+            <option value="de">Deutsch</option>
+            <option value="en">English</option>
+          </select>
+          <!-- No `data-i18n-attr` here on purpose: `wireThemeToggle` owns this
+               label, because it is the only thing that knows which way the
+               toggle currently points. The German is the no-script fallback. -->
+          <button id="theme" type="button" class="icon-btn mi"
+                  aria-label="Auf dunkles Design wechseln"></button>
+          <!-- The handbook, and this is the page it describes at greatest
+               length. It goes away with the rest of `#main` in the slips view,
+               which is the right outcome for the reason the note above the top
+               bar gives, even though a new tab would not itself lose them.
+               New tab and no `data-i18n` — login.html has the reasons. -->
+          <a class="btn icon-btn" href="/handbuch" target="_blank" rel="noopener"
+             aria-label="Handbuch öffnen" title="Handbuch öffnen">?</a>
+        </nav>
+      </header>
+
+      <main class="page">
+      <h1 data-i18n="roster.heading">Klassen &amp; Lernende</h1>
+      <p class="sub" id="sub">…</p>
+
+      <section id="teachers-section" hidden>
+        <h2 data-i18n="roster.teachers">Lehrpersonen</h2>
+        <div id="teachers"></div>
+        <details>
+          <summary data-i18n="roster.teacher_new">Neue Lehrperson</summary>
+          <div class="form">
+            <label><span data-i18n="common.first_name">Vorname</span> <input id="t-first" autocomplete="off" /></label>
+            <label><span data-i18n="common.last_name">Nachname</span> <input id="t-last" autocomplete="off" /></label>
+            <button id="t-create" data-i18n="common.create">Anlegen</button>
+          </div>
+          <p class="quiet msg"><span data-i18n="roster.teacher_hint_1"
+            >Benutzernamen werden nie neu vergeben: eine zweite „Philip Schaffner“ wird für immer </span
+            ><code>t_schaffner2</code><span data-i18n="roster.teacher_hint_2"
+            >. Zuerst oben nachsehen.</span></p>
+        </details>
+      </section>
+
+      <section>
+        <h2 data-i18n="roster.classes">Klassen</h2>
+        <div id="classes"></div>
+        <details>
+          <summary data-i18n="roster.class_new">Neue Klasse</summary>
+          <div class="form">
+            <label><span data-i18n="common.class_code">Kürzel</span> <input id="c-code" size="8" autocomplete="off" /></label>
+            <label><span data-i18n="common.name">Name</span> <input id="c-name" autocomplete="off" /></label>
+            <label><span data-i18n="common.school_year">Schuljahr</span> <input id="c-year" size="9" autocomplete="off" /></label>
+            <label id="c-teacher-label" hidden><span data-i18n="common.teacher">Lehrperson</span> <select id="c-teacher"></select></label>
+            <button id="c-create" data-i18n="common.create">Anlegen</button>
+          </div>
+          <p class="quiet msg"><span data-i18n="roster.class_hint_1"
+            >Das Kürzel steckt im Benutzernamen jeder Lernenden (</span
+            ><code>u_k3a_muster_lena</code><span data-i18n="roster.class_hint_2"
+            >) und lässt sich nachher nicht mehr ändern.</span></p>
+        </details>
+      </section>
+
+      <section id="roster-section" hidden>
+        <h2 id="roster-title"></h2>
+        <div id="roster"></div>
+        <div class="msg" id="roster-msg"></div>
+        <details id="add-details">
+          <summary data-i18n="roster.add_students">Lernende hinzufügen</summary>
+          <p class="quiet msg"><span data-i18n="roster.paste_hint_1"
+            >Eine Person pro Zeile. </span><code data-i18n="roster.paste_hint_code"
+            >Nachname, Vorname</code><span data-i18n="roster.paste_hint_2"
+            > und aus Excel kopierte Spalten werden ebenfalls erkannt. Bei </span
+            ><strong data-i18n="roster.paste_hint_strong">zwei Vornamen</strong
+            ><span data-i18n="roster.paste_hint_3"
+            > ist das Komma nötig — ohne es zählt der zweite Vorname zum Nachnamen, und der
+            Benutzername bleibt so für immer.</span></p>
+          <!-- The placeholder is the worked example people actually read, so it
+               shows all three shapes: the ordinary line, the multi-word surname
+               the space heuristic exists for, and the comma that is the only way
+               out of the case it gets wrong. The names are the same in both
+               locales; the catalogue entry says why. -->
+          <textarea id="paste" spellcheck="false"
+                    data-i18n-attr="placeholder:roster.paste_placeholder"
+                    placeholder="Muster Lena&#10;Von Gunten Anna&#10;Maradona, Diego Armando"></textarea>
+          <div class="form">
+            <label><span data-i18n="roster.order">Reihenfolge</span>
+              <select id="order">
+                <option value="last-first" selected data-i18n="roster.order_last_first">Nachname Vorname</option>
+                <option value="first-last" data-i18n="roster.order_first_last">Vorname Nachname</option>
+              </select>
+            </label>
+            <button id="s-create" disabled data-i18n="common.create">Anlegen</button>
+          </div>
+          <div id="preview"></div>
+        </details>
+      </section>
+
+      <p class="note" data-i18n="roster.note">
+        Ein Zugangszettel existiert genau einmal — im Moment, in dem das Konto
+        entsteht. Passwörter lassen sich nicht nachschlagen, nur neu ausstellen.
+        Darum: erst drucken, dann schliessen. Geht die Ansicht trotzdem verloren,
+        stellt „Neue Zettel“ in der Klassenliste welche aus für alle, die sich noch
+        nie angemeldet haben — bei denen kann kein ausgeteilter Zettel entwertet
+        werden.
+      </p>
+      </main>
+    </div>
+
+    <!-- No language control in this view on purpose: switching reloads the page
+         (`i18n.js`), which is one confirm dialog away from losing thirty
+         passwords. The beforeunload guard would ask first, but a control that
+         has to be defended by a guard does not belong on the screen the guard
+         exists for — see roster.js's header, point 1. -->
+    <section id="slips-view" class="page" hidden>
+      <div class="noprint">
+        <h1 id="slips-title" data-i18n="roster.slips_title">Zugangszettel</h1>
+        <p class="sub" data-i18n="roster.slips_last_chance">
+          Diese Passwörter sind hier zum letzten Mal zu sehen. Jetzt drucken oder
+          abschreiben — danach sind sie nur noch neu ausstellbar.
+        </p>
+        <div id="slips-warn"></div>
+        <nav>
+          <button id="print" data-i18n="roster.print">Drucken</button>
+          <button id="slips-done" data-i18n="roster.slips_done">Zettel sind gedruckt — schliessen</button>
+        </nav>
+      </div>
+      <div class="slips" id="slips"></div>
+    </section>
+
+    <footer class="footer">
+      <span class="footer-version" id="version"></span>
+      <span class="footer-contact"><span data-i18n="footer.contact">Fragen oder Probleme:</span>
+        <a href="mailto:philip.schaffner@kwi.ch">philip.schaffner@kwi.ch</a></span>
+    </footer>
+
+    <script type="module" src="/assets/roster.js"></script>
+  </body>
+</html>

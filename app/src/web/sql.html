@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="de" data-app="datebaenkli">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="sql.title">SQL — Datebänkli</title>
+    <link rel="preload" href="/assets/fonts/source-sans-3-400-latin.woff2" as="font"
+          type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/ibm-plex-mono-400-latin.woff2" as="font"
+          type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/material-symbols-rounded-400.woff2" as="font"
+          type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/assets/fonts.css" />
+    <link rel="stylesheet" href="/assets/chalk-tokens.css" />
+    <link rel="stylesheet" href="/assets/app.css" />
+    <script src="/assets/theme.js"></script>
+  </head>
+  <body data-page="sql">
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="brand-badge mi" aria-hidden="true">database</span>
+        <span class="wordmark">Datebänkli</span>
+      </a>
+      <span class="who" id="who"></span>
+      <nav class="topbar-actions">
+        <button id="import" data-i18n="sql.import">CSV importieren</button>
+        <button id="reset" class="btn-danger" data-i18n="sql.reset">Datenbank zurücksetzen</button>
+        <!-- Both of the above are hidden while an exercise is open, and
+             `sql.js`'s exercise section says why: "reset my database" would take
+             the exercise with it, and an import goes to the playground schema
+             rather than to the one on screen. The exercise bar carries the
+             narrow versions of both. -->
+        <button id="exercises" data-i18n="nav.exercises">Übungen</button>
+        <button id="overview" data-i18n="nav.overview">Übersicht</button>
+        <select id="lang" class="lang-select" aria-label="Sprache / Language">
+          <option value="de">Deutsch</option>
+          <option value="en">English</option>
+        </select>
+        <!-- No `data-i18n-attr` here on purpose: `wireThemeToggle` owns this
+             label, because it is the only thing that knows which way the toggle
+             currently points. The German below is the no-script fallback. -->
+        <button id="theme" type="button" class="icon-btn mi"
+                aria-label="Auf dunkles Design wechseln"></button>
+        <!--
+          **No handbook button here, and that is a decision rather than an
+          oversight.** The other four teacher-facing pages carry one; this is
+          the student's page and it deliberately does not. `/handbuch` is the
+          teacher's manual — creating classes, printing credential slips,
+          reading the lesson view — so a link to it from this desk answers no
+          question that gets asked at it, and a control that never helps is
+          worse than none. There is likewise no hidden element and no role check
+          for it: nothing to leave dead.
+
+          **Where a student help belongs, when someone writes one.** Right here,
+          as a second `?` pointing at its own short page — not at this one. It
+          has to be a different document, because it has to be bilingual (this
+          page has a language select; the handbook does not), it has to be short
+          enough to read mid-lesson, and it should cover the three things that
+          actually stall someone: why `SELECT * FROM kunden` finds *your* table
+          and nobody else's (`search_path`), why a write is refused once the
+          quota bar in the schema pane fills up, and what the CSV dialog wants
+          from a Swiss export. `assets/hints.js` already holds the SQLSTATE
+          explanations such a page would be the long form of, so it starts there
+          rather than from nothing.
+
+          Deferred on purpose as of this change: the teacher handbook exists and
+          is a known quantity, a student one does not, and shipping a bad one is
+          worse than shipping none.
+        -->
+      </nav>
+    </header>
+
+    <main>
+      <aside id="browser">
+        <h2 data-i18n="sql.tables">Tabellen</h2>
+        <div id="tree" class="empty" data-i18n="common.loading">wird geladen …</div>
+        <!--
+          Disk usage, filled by sql.js and hidden until it has a figure. No
+          `data-i18n` on purpose: the text is a template with two substitutions
+          and which of two templates it uses depends on whether the student is
+          over the limit, so `apply()` writing a constant key here would undo the
+          render. That is the same shape as the theme button's missing
+          `data-i18n-attr` above — one owner per string, and here it is
+          `renderQuota()`.
+        -->
+        <p id="quota" hidden></p>
+      </aside>
+
+      <section id="work">
+        <!--
+          The exercise bar — phase 9. Hidden unless the page was opened as
+          `/sql?uebung=<id>`, which is the only way in: there is one SQL editor
+          in this app (the bundle), so working on an exercise happens here.
+
+          The task text is rendered by `markdown.js` into `#exTaskBody`, which is
+          the only `innerHTML` on this page carrying text another person wrote.
+        -->
+        <section id="exercise" hidden class="ex-bar">
+          <div class="hstack">
+            <span class="eyebrow" data-i18n="ex.eyebrow">Übung</span>
+            <strong id="exTitle"></strong>
+            <button id="exTask" class="small" data-i18n="ex.show_task">Aufgabe</button>
+            <button id="exReset" class="small btn-danger" data-i18n="ex.reset_tables">
+              Tabellen zurücksetzen
+            </button>
+            <button id="exSubmit" class="small primary" data-i18n="ex.hand_in">Abgeben</button>
+            <button id="exLeave" class="small" data-i18n="ex.leave">Eigene Datenbank</button>
+            <span class="small" id="exStatus"></span>
+          </div>
+          <div id="exTaskBody" class="ex-task"></div>
+        </section>
+
+        <div id="toolbar">
+          <button id="run" class="primary" data-i18n="sql.run">Ausführen</button>
+          <button id="cancel" disabled data-i18n="common.cancel">Abbrechen</button>
+          <span class="status" id="status"></span>
+        </div>
+        <div id="editor"></div>
+        <div id="resultsHead" data-i18n="sql.result">Ergebnis</div>
+        <div id="results"></div>
+      </section>
+    </main>
+
+    <!--
+      The CSV upload. Two steps on purpose: correcting the inferred types is
+      itself the lesson (architecture §4), so the second step is a form rather
+      than a confirmation. `csv-import.js` only fills this in — the structure
+      lives here for the same reason the rest of the page's does.
+    -->
+    <!--
+      Every translated label here is a <span> inside its <label>, never the
+      label's own text. `i18n.js`'s apply() sets textContent, which would take
+      the <input> with it — a label that swallows its own control is a dead form
+      field, and it would only show up in whichever locale was swept second.
+    -->
+    <dialog id="importDialog">
+      <h2 data-i18n="import.title">CSV importieren</h2>
+
+      <p>
+        <label
+          ><span data-i18n="import.file">Datei</span>
+          <input type="file" id="importFile" accept=".csv,.txt,text/csv"
+        /></label>
+      </p>
+
+      <div id="importConfig" hidden>
+        <div class="opts">
+          <label
+            ><span data-i18n="import.table">Tabellenname</span>
+            <input type="text" id="importTable"
+          /></label>
+          <label>
+            <span data-i18n="import.delimiter">Trennzeichen</span>
+            <select id="importDelimiter">
+              <option value=";" data-i18n="import.semicolon">Strichpunkt ;</option>
+              <option value="," data-i18n="import.comma">Komma ,</option>
+              <option value="&#9;" data-i18n="import.tab">Tabulator</option>
+              <option value="|" data-i18n="import.pipe">Strich |</option>
+            </select>
+          </label>
+          <label>
+            <input type="checkbox" id="importHeader" />
+            <span data-i18n="import.first_row">Erste Zeile sind Spaltennamen</span>
+          </label>
+          <label>
+            <input type="checkbox" id="importReplace" />
+            <span data-i18n="import.replace">Bestehende Tabelle ersetzen</span>
+          </label>
+        </div>
+
+        <p class="note" id="importSummary"></p>
+
+        <h3 data-i18n="import.columns">Spalten</h3>
+        <table class="cols">
+          <thead>
+            <tr>
+              <th data-i18n="import.in_file">in der Datei</th>
+              <th data-i18n="import.column_name">Spaltenname</th>
+              <th data-i18n="import.type">Datentyp</th>
+            </tr>
+          </thead>
+          <tbody id="importColumns"></tbody>
+        </table>
+
+        <h3 data-i18n="import.preview">Vorschau</h3>
+        <div id="importPreview"></div>
+      </div>
+
+      <p class="note" id="importStatus"></p>
+      <div id="importErrors" class="error"></div>
+
+      <menu>
+        <button id="importCancel" data-i18n="common.cancel">Abbrechen</button>
+        <button id="importGo" class="primary" disabled data-i18n="import.go">Importieren</button>
+      </menu>
+    </dialog>
+
+    <!--
+      Handing in. The editor's contents are what gets submitted, so the dialog
+      only asks for the note — showing the SQL again would be a confirmation of
+      something already on screen behind it.
+    -->
+    <dialog id="handInDialog">
+      <h2 data-i18n="ex.hand_in_title">Lösung abgeben</h2>
+      <p class="small muted" data-i18n="ex.hand_in_what">
+        Abgegeben wird, was gerade im Editor steht. Du kannst mehrmals abgeben.
+      </p>
+      <p>
+        <label class="block"
+          ><span data-i18n="ex.note">Notiz an die Lehrperson (freiwillig)</span>
+          <textarea id="handInNote" rows="3" maxlength="2000"></textarea
+        ></label>
+      </p>
+      <p class="msg" id="handInStatus"></p>
+      <menu>
+        <button id="handInCancel" data-i18n="common.cancel">Abbrechen</button>
+        <button id="handInGo" class="primary" data-i18n="ex.hand_in">Abgeben</button>
+      </menu>
+    </dialog>
+
+    <footer class="footer">
+      <span class="footer-version" id="version"></span>
+      <span class="footer-contact"><span data-i18n="footer.contact">Fragen oder Probleme:</span>
+        <a href="mailto:philip.schaffner@kwi.ch">philip.schaffner@kwi.ch</a></span>
+    </footer>
+
+    <script type="module" src="/assets/sql.js"></script>
+  </body>
+</html>

@@ -1,0 +1,35 @@
+# The build context is the repository root (docker-compose.yml's `build:`), so
+# this file — not `app/.dockerignore`, which Docker never reads for a context
+# that is not `app/` — is what keeps the context from being the whole checkout.
+# On the server that checkout contains `pgdata/`, which is the live database.
+
+.git
+node_modules
+app/node_modules
+app/dist
+app/test
+
+# secrets, and the local crib sheet
+.env
+setupReference
+
+# the data volume and the dumps, all bind-mounted next to this file on the
+# server. `pgdata/` alone is gigabytes.
+pgdata
+backups
+archive
+
+*.log
+
+# Only one file out of docs/ reaches the image: the handbook, which `postbuild`
+# copies into dist/web to serve at /handbuch. The rest is Markdown and a
+# Puppeteer-driven generator with its own node_modules.
+docs/*
+!docs/handbuch.html
+
+chalk-design-system
+db
+.github
+.vscode
+.idea
+.DS_Store

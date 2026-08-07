@@ -1,0 +1,37 @@
+{
+  "name": "datebaenkli",
+  "version": "0.9.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "postbuild": "mkdir -p dist/db && cp -R src/db/sql dist/db/ && cp -R src/web dist/ && cp ../docs/handbuch.html dist/web/ && rm dist/web/assets/editor.entry.js && npm run bundle:editor && node tools/stamp-build.mjs",
+    "bundle:editor": "esbuild src/web/assets/editor.entry.js --bundle --format=esm --minify --sourcemap --target=es2022 --outfile=dist/web/assets/editor.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "node --watch --experimental-strip-types src/server.ts",
+    "start": "node dist/server.js",
+    "test": "npm run build && node --test --test-concurrency=1 test/*.test.mjs"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/static": "^10.1.2",
+    "fastify": "^5.2.1",
+    "pg": "^8.13.3"
+  },
+  "devDependencies": {
+    "@codemirror/lang-sql": "^6.10.0",
+    "@codemirror/state": "^6.7.1",
+    "@codemirror/view": "^6.43.6",
+    "@electric-sql/pglite": "^0.5.4",
+    "@types/node": "^22.13.9",
+    "@types/pg": "^8.11.11",
+    "codemirror": "^6.0.2",
+    "esbuild": "^0.28.1",
+    "libpg-query": "^17.7.4",
+    "pino-pretty": "^13.0.0",
+    "typescript": "^5.8.2"
+  }
+}

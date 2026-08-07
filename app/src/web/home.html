@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="de" data-app="datebaenkli">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Datebänkli</title>
+    <!--
+      The Chalk head, identical on all six pages. It is copied rather than shared
+      because `routes/pages.ts` has no template engine and deliberately does not
+      want one — every page is served as a byte-for-byte constant.
+
+      Order matters twice over: `theme.js` is a classic script so that it runs
+      before first paint (a module would be deferred and the dark reader would
+      get a white flash), and the stylesheets precede it only because CSS does
+      not block it.
+    -->
+    <link rel="preload" href="/assets/fonts/source-sans-3-400-latin.woff2" as="font"
+          type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/material-symbols-rounded-400.woff2" as="font"
+          type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/assets/fonts.css" />
+    <link rel="stylesheet" href="/assets/chalk-tokens.css" />
+    <link rel="stylesheet" href="/assets/app.css" />
+    <script src="/assets/theme.js"></script>
+  </head>
+  <body data-page="home">
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="brand-badge mi" aria-hidden="true">database</span>
+        <span class="wordmark">Datebänkli</span>
+      </a>
+      <nav class="topbar-actions">
+        <button id="sql" hidden data-i18n="nav.sql">SQL-Editor</button>
+        <button id="exercises" hidden data-i18n="nav.exercises">Übungen</button>
+        <button id="lesson" hidden data-i18n="nav.lesson">Lektion</button>
+        <button id="roster" hidden data-i18n="nav.roster">Klassen</button>
+        <button id="change" data-i18n="home.password">Passwort ändern</button>
+        <button id="logout" data-i18n="home.logout">Abmelden</button>
+        <!-- Bilingual on purpose, and the only label on the app that is: it names
+             the control's own subject, so translating it would hide the option
+             from exactly the reader looking for it. -->
+        <select id="lang" class="lang-select" aria-label="Sprache / Language">
+          <option value="de">Deutsch</option>
+          <option value="en">English</option>
+        </select>
+        <!-- No `data-i18n-attr` here on purpose: `wireThemeToggle` owns this
+             label, because it is the only thing that knows which way the toggle
+             currently points. The German below is the no-script fallback. -->
+        <button id="theme" type="button" class="icon-btn mi"
+                aria-label="Auf dunkles Design wechseln"></button>
+        <!-- The handbook. `hidden` here and revealed by `home.js` for the same
+             reason the three nav buttons above are: this one shell is the
+             overview for staff *and* for students, and the handbook is the
+             teacher's manual. New tab, so a page behind this one survives.
+             No `data-i18n`: the handbook is German-only, and login.html says
+             the rest. -->
+        <a id="help" hidden class="btn icon-btn" href="/handbuch" target="_blank"
+           rel="noopener" aria-label="Handbuch öffnen" title="Handbuch öffnen">?</a>
+      </nav>
+    </header>
+
+    <main class="page page-narrow">
+      <h1 id="name">…</h1>
+      <p class="role muted small" id="role"></p>
+
+      <div id="content"></div>
+    </main>
+
+    <footer class="footer">
+      <span class="footer-version" id="version"></span>
+      <span class="footer-contact"><span data-i18n="footer.contact">Fragen oder Probleme:</span>
+        <a href="mailto:philip.schaffner@kwi.ch">philip.schaffner@kwi.ch</a></span>
+    </footer>
+
+    <!-- The <title> carries no key: the product name is the same word in both
+         locales, so a `home.title` would only be two identical catalogue rows. -->
+    <script type="module" src="/assets/home.js"></script>
+  </body>
+</html>

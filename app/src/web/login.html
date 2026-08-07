@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de" data-app="datebaenkli">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Anmelden / Sign in — Datebänkli</title>
+    <link rel="preload" href="/assets/fonts/source-sans-3-400-latin.woff2" as="font"
+          type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/material-symbols-rounded-400.woff2" as="font"
+          type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/assets/fonts.css" />
+    <link rel="stylesheet" href="/assets/chalk-tokens.css" />
+    <link rel="stylesheet" href="/assets/app.css" />
+    <script src="/assets/theme.js"></script>
+    <!--
+      No top bar on this page, and therefore no theme toggle: there is nothing
+      to navigate to and nobody to name yet. `theme.js` still runs, so a reader
+      who chose dark elsewhere gets dark here — the choice is device-local
+      (`util.js`), which is exactly what makes it available before login.
+    -->
+  </head>
+  <body data-page="auth">
+    <!--
+      The handbook, before anyone has logged in — which is a case it exists for:
+      a teacher who cannot remember how to hand out access has no session yet,
+      so `GET /handbuch` is `public` (server.ts) and this is the page that needs
+      that most.
+
+      Corner-fixed rather than inside the card (`.help-fab`, app.css): the card
+      is a two-field form filled in from a paper slip, and a second affordance in
+      it competes with the field the reader is meant to be looking at. New tab
+      rather than this one, which matters more on the pages *after* login — there
+      it is the difference between reading a paragraph and losing a half-written
+      query — but the control behaves identically everywhere on purpose.
+
+      German, and carrying no `data-i18n` even though most of the app would: the
+      handbook itself exists only in German, so an English label would promise a
+      document that is not there. A different reason from the bilingual text
+      below, and both are deliberate.
+    -->
+    <a class="btn icon-btn help-fab" href="/handbuch" target="_blank" rel="noopener"
+       aria-label="Handbuch öffnen" title="Handbuch öffnen">?</a>
+
+    <div class="auth card">
+      <div class="brand-stack">
+        <span class="brand-badge mi" aria-hidden="true">database</span>
+        <h1>Datebänkli</h1>
+      </div>
+      <!--
+        Bilingual, not translated, and this is the one page where that is the
+        right answer. It is pre-auth: there is no `app_user.locale` to read yet,
+        and the pages are served as static bytes with no server-side
+        substitution (routes/pages.ts).
+
+        **One of the two original arguments for this expired in phase 7.** It
+        used to say a language <select> here would need to persist a choice in
+        client storage, which was "a new concept" — `localStorage["chalk-lang"]`
+        now exists, so this page *could* render in whichever language this
+        browser last used. It still does not, and the remaining reason is the
+        one that was always the stronger of the two: a slip handed to a student
+        who has never logged in carries no cached locale either, so the first
+        view is a coin toss in exactly the case that matters most. Swiss federal
+        forms are side-by-side bilingual for the same reason. Guessing from
+        Accept-Language remains wrong — that is the laptop's setting, not the
+        student's.
+      -->
+      <p class="muted small">
+        Benutzername und Passwort stehen auf deinem Zettel.<br />
+        <span lang="en">Your username and password are on your slip.</span>
+      </p>
+
+      <form id="form" autocomplete="on">
+        <label for="username">Benutzername <span class="en" lang="en">/ Username</span></label>
+        <input id="username" name="username" autocapitalize="none" autocorrect="off"
+               spellcheck="false" required autofocus />
+
+        <label for="password">Passwort <span class="en" lang="en">/ Password</span></label>
+        <input id="password" name="password" type="password" required />
+
+        <button type="submit" class="primary">Anmelden / Sign in</button>
+      </form>
+      <p id="error" role="alert" class="banner banner-bad"></p>
+    </div>
+
+    <!-- Bilingual and carrying no `data-i18n`, unlike the other five: this page
+         never loads `i18n.js` (see the note above the form), so a key here would
+         render as the key itself. The label follows the page's own convention
+         instead — both languages, side by side. -->
+    <footer class="footer">
+      <span class="footer-version" id="version"></span>
+      <span class="footer-contact">Fragen oder Probleme / Questions or problems:
+        <a href="mailto:philip.schaffner@kwi.ch">philip.schaffner@kwi.ch</a></span>
+    </footer>
+
+    <script type="module" src="/assets/login.js"></script>
+  </body>
+</html>

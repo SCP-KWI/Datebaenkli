@@ -1,0 +1,1613 @@
+/* ============================================================================
+   Datebänkli — the app shell. Phase 7, the Chalk pass.
+   Built against chalk-tokens.css; see chalk-design-system/ for the system.
+
+   Before phase 7 this repo had no stylesheet at all: six pages, six inline
+   <style> blocks, and only sql.html with a <header>. This file replaces all
+   six. It is one file rather than six because there are six pages and one
+   design — a per-page split would duplicate the top bar five times, which is
+   exactly the thing that goes quietly out of step.
+
+   Page-specific rules live at the bottom under `body[data-page="…"]`, after the
+   shared shell. That boundary is worth keeping: anything above it is a promise
+   made to all six pages.
+   ============================================================================ */
+
+/* ---------------------------------------------------------------------------
+   The app accent — violet, hue 300 (ARCHITECTURE §8, confirmed 2026-07-28).
+
+   Declared here rather than in chalk-tokens.css's :root, so that this app sets
+   `data-app` on <html> and the token file stays the portable artifact it is
+   meant to be. Both the alias and the tokens exist — the tokens because this
+   repo's copy is the accent ring's reconciled master, the alias because that is
+   how an app selects one.
+   --------------------------------------------------------------------------- */
+html[data-app='datebaenkli'] {
+  --accent: var(--datebaenkli);
+  --accent-tint: var(--datebaenkli-tint);
+  --accent-ink: var(--datebaenkli-ink);
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+   --------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Chalk drives light/dark with the data-theme attribute, not the OS query, so
+     the browser has to be told which way the page currently reads — otherwise
+     form controls and scrollbars stay light inside a dark page. The token file
+     sets `color-scheme` per mode; this only has to not fight it. */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  letter-spacing: -0.015em;
+  font-weight: 700;
+}
+h1 {
+  font-size: 26px;
+}
+h2 {
+  font-size: 19px;
+}
+h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+p {
+  margin: 0 0 0.8rem;
+}
+
+a {
+  color: var(--accent-ink);
+  text-decoration: none;
+}
+/*
+   Underline on hover, not a colour change, and that is a consequence of
+   darkening the accents rather than a preference.
+
+   This used to be `color: var(--accent)`. The accent solid is deliberately the
+   same in both modes, so as *text* it can only suit one of them: after the
+   AA fix it measures 4.4 on light paper (up from a failing 2.8) and 3.7 on
+   dark (down from 5.8). Trading a failure in light mode for one in dark mode is
+   not a fix, so the hover state stops carrying meaning in colour at all.
+
+   `--accent-ink` does shift per mode and is what the resting state already
+   uses — 7.0 light, 9.7 dark — so keeping the colour and adding the underline
+   leaves the affordance stronger than it was and legible in both. Datebänkli
+   §4ww has the measurements.
+*/
+a:hover {
+  text-decoration: underline;
+}
+
+code,
+kbd,
+samp {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+/* Material Symbols as ligature text. Only the glyphs in tools/vendor-fonts.mjs's
+   ICONS list exist — an icon outside it renders as its own name in words, which
+   is the loud failure that makes subsetting the font safe. */
+.mi {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  vertical-align: middle;
+  user-select: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Top bar — Chalk §7. Sticky, translucent, one hairline at the bottom.
+   --------------------------------------------------------------------------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in oklch, var(--paper) 82%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--ink);
+  flex: none;
+}
+.brand:hover {
+  color: var(--ink);
+}
+
+.brand-badge {
+  display: grid;
+  place-items: center;
+  width: 33px;
+  height: 33px;
+  border-radius: 10px;
+  background: var(--accent);
+  /* White, not --paper: the badge is a solid accent tile in both modes, so its
+     glyph must not follow the surface. */
+  color: #fff;
+  font-size: 20px;
+  box-shadow: var(--shadow);
+}
+
+.wordmark {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Who is looking. Pushed against the brand rather than centred, so the actions
+   on the right keep a stable position as the name's length changes. */
+.topbar .who {
+  color: var(--muted);
+  font-size: 13px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------------------------
+   Buttons — Chalk §7
+   --------------------------------------------------------------------------- */
+/* `hidden` has to keep working, and the rule below is why it did not.
+   `[hidden] { display: none }` comes from the user-agent sheet, so *any* author
+   rule that sets `display` beats it on specificity — `.btn, button` sets
+   `inline-flex`, so every `<button hidden>` in the app rendered anyway. That is
+   how a student saw the "Lektion" and "Klassen" buttons on the overview:
+   `home.js` set `.hidden = true` correctly and the CSS ignored it.
+   `!important` is the conventional fix and is warranted — this is a
+   presentational override of a semantic attribute, and there is no case where a
+   `hidden` element should be laid out. Keep it above the button rules so it
+   reads as the exception it is. */
+[hidden] {
+  display: none !important;
+}
+
+.btn,
+button {
+  font: inherit;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: var(--r);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    filter 0.12s;
+}
+.btn:hover,
+button:hover {
+  border-color: var(--ink);
+}
+button:focus-visible,
+.btn:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn-primary,
+button.primary {
+  background: var(--accent);
+  border-color: transparent;
+  /* White on the solid accent in both modes — the accent solid does not shift
+     between light and dark, so neither may its text. */
+  color: #fff;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+.btn-primary:hover,
+button.primary:hover {
+  border-color: transparent;
+  filter: brightness(1.05);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent-ink);
+}
+.btn-ghost:hover {
+  background: var(--accent-tint);
+  border-color: transparent;
+}
+
+.btn-danger {
+  color: var(--bad-ink);
+  border-color: color-mix(in oklch, var(--bad) 45%, var(--line-strong));
+}
+.btn-danger:hover {
+  background: var(--bad-tint);
+  border-color: var(--bad);
+}
+
+button[disabled],
+.btn[disabled] {
+  opacity: 0.4;
+  cursor: default;
+  filter: none;
+}
+button[disabled]:hover {
+  border-color: var(--line-strong);
+}
+
+/* The square icon button the theme toggle uses — Chalk §7 puts it at 36–38 px. */
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  flex: none;
+  font-size: 20px;
+  border-radius: var(--r);
+}
+
+/* The handbook control is an `<a class="btn icon-btn">`, not a `<button>`, and
+   that is forced rather than chosen: it opens in a new tab, and only a real
+   link gives the reader middle-click, ctrl-click and "open in new window" — a
+   button plus `window.open` gives none of them, needs an inline handler the CSP
+   forbids, and is popup-blocked besides. One rule follows, and it is not
+   cosmetic: `a:hover` underlines, which would draw a line under the `?` inside
+   the 36 px box. The colour needs nothing — `.btn` is a class and the `a` rule
+   is an element selector, so `var(--ink)` already wins. */
+a.icon-btn:hover {
+  text-decoration: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Inputs — Chalk §7. 1.5px border, and focus is a ring rather than a colour
+   change, so it is visible against both surfaces.
+   --------------------------------------------------------------------------- */
+input,
+select,
+textarea {
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--r);
+  padding: 0.4rem 0.65rem;
+  transition:
+    border-color 0.12s,
+    box-shadow 0.12s;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-tint);
+}
+input[type='file'] {
+  padding: 0.3rem;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+
+/* Native selects keep the platform chevron; only the box is ours. `appearance`
+   is left alone deliberately — a custom chevron would need a background image,
+   and the one thing this app must not do is ship an asset it cannot self-host. */
+select {
+  padding-right: 0.4rem;
+  cursor: pointer;
+}
+
+/* The language control (phase 6b shipped it unstyled, waiting for this shell).
+   Compact, so it reads as chrome beside the theme toggle rather than as a form
+   field that happens to live in the nav. */
+.lang-select {
+  height: 36px;
+  padding: 0 0.4rem;
+  font-size: 13px;
+  border-width: 1px;
+  border-color: var(--line-strong);
+  background: var(--surface);
+}
+
+/* ---------------------------------------------------------------------------
+   Layout containers
+   --------------------------------------------------------------------------- */
+.page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 1.6rem 1rem 4rem;
+}
+.page-narrow {
+  max-width: 46rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  padding: 1.25rem 1.4rem;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+/* Named `hstack`, not `row`: `lesson.js` and `roster.js` both put class="row" on
+   a <tr> to mark it clickable, and a `display: flex` utility of that name would
+   silently destroy every table on two pages. */
+.hstack {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* NOTE: there is deliberately no global `.cols` rule. The class is overloaded
+   three ways across this app and only one of them is a flex container:
+   `lesson.js` uses it for a two-column split (styled below, page-scoped),
+   `sql.js` uses it for the column list under a table in the schema browser, and
+   the CSV import dialog puts it on a `<table>`. A shared `display: flex` here
+   silently destroys the latter two. */
+
+/* ---------------------------------------------------------------------------
+   Shared text utilities.
+
+   These are global rather than page-scoped because the page scripts share them:
+   `.bad` and `.quiet` are emitted by both `lesson.js` and `roster.js`, `.msg` by
+   three scripts. Scoping them per page is how one of the three quietly loses its
+   styling.
+   --------------------------------------------------------------------------- */
+.ok {
+  color: var(--ok-ink);
+}
+.warn {
+  color: var(--warn-ink);
+}
+.bad {
+  color: var(--bad-ink);
+}
+.quiet {
+  color: var(--faint);
+}
+.num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A state tag beside a name — roster's "archiviert", lesson's error count. */
+.tag {
+  display: inline-block;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tag.bad {
+  background: var(--bad-tint);
+  color: var(--bad-ink);
+}
+.tag.warn {
+  background: var(--warn-tint);
+  color: var(--warn-ink);
+}
+
+/* An inline status line under a form. `.msg.bad` is a failure, `.msg.quiet` the
+   resting state — both set by `roster.js` in one template string. */
+.msg {
+  font-size: 13px;
+  margin: 0.4rem 0 0;
+}
+
+/* A subtitle under a heading — which class, how many students. */
+.sub {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0.2rem 0 0;
+}
+
+button.small,
+.small-btn {
+  font-size: 12.5px;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--r-sm);
+}
+
+/* A clickable table row — the roster's classes, the lesson view's students. */
+tr.row {
+  cursor: pointer;
+}
+tr.row:hover td {
+  background: var(--accent-tint);
+}
+tr.row.sel td {
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+}
+td.act,
+th.act {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+}
+
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 13px;
+}
+
+/* ---------------------------------------------------------------------------
+   Table / preview — Chalk §7. Numeric cells are mono and right-aligned with
+   tabular figures; add `.num` to the cell.
+   --------------------------------------------------------------------------- */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th {
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-align: left;
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+td {
+  padding: 0.42rem 0.7rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+td.num,
+th.num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.table-wrap {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: auto;
+  background: var(--surface);
+}
+
+/* ---------------------------------------------------------------------------
+   Badges / chips and status banners — Chalk §7
+   --------------------------------------------------------------------------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.chip-ok {
+  background: var(--ok-tint);
+  color: var(--ok-ink);
+}
+.chip-warn {
+  background: var(--warn-tint);
+  color: var(--warn-ink);
+}
+.chip-bad {
+  background: var(--bad-tint);
+  color: var(--bad-ink);
+}
+.chip-accent {
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+}
+.chip .num,
+.chip-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 14px;
+}
+.banner .mi {
+  flex: none;
+  font-size: 20px;
+  margin-top: 1px;
+}
+.banner-ok {
+  background: var(--ok-tint);
+  color: var(--ok-ink);
+}
+.banner-warn {
+  background: var(--warn-tint);
+  color: var(--warn-ink);
+}
+.banner-bad {
+  background: var(--bad-tint);
+  color: var(--bad-ink);
+}
+.banner:empty {
+  display: none;
+}
+
+/* ---------------------------------------------------------------------------
+   The page footer — a build stamp and who to write to.
+   --------------------------------------------------------------------------- */
+.footer {
+  display: flex;
+  gap: 0.4rem 1rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  padding: 0.7rem 1rem;
+  border-top: 1px solid var(--line);
+  /* `--muted`, not `--faint`. At 12px this needs to clear WCAG AA and `--faint`
+     measures 3.0:1 on `--paper` in light mode; `--muted` measures 5.3 (6.8 in
+     dark). Chalk reserves `--faint` for tertiary text and icons — a line
+     carrying the address someone writes to when they are stuck is not that. */
+  color: var(--muted);
+  font-size: 12px;
+}
+/* Mono and tabular for the same reason every other figure in this app is: it is
+   a number someone will read out or compare against another one. */
+.footer-version {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.footer-contact {
+  margin-left: auto;
+}
+.footer a {
+  color: var(--muted);
+}
+.footer a:hover {
+  color: var(--accent-ink);
+}
+@media (max-width: 560px) {
+  /* Below this the two halves wrap, and `margin-left: auto` would strand the
+     address against the right edge on its own line. */
+  .footer-contact {
+    margin-left: 0;
+  }
+}
+
+/* A note at the foot of a page — the one place Chalk's "left accent border" is
+   used, and used sparingly, per §9's anti-slop list. */
+.note {
+  margin-top: 2rem;
+  padding: 0.7rem 1rem;
+  border-left: 3px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+dialog {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+  padding: 1.2rem 1.3rem;
+  max-width: min(52rem, 92vw);
+}
+dialog::backdrop {
+  background: color-mix(in oklch, var(--ink) 38%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+/* ============================================================================
+   Page-specific. Everything above is shared by all six pages.
+   ============================================================================ */
+
+/* The three ordinary document-flow pages. `margin-top: auto` on the last flex
+   item is what pins the footer to the bottom of a short page without pinning it
+   to the *viewport* — a fixed footer would sit on top of the roster's content
+   when a class list is long. */
+body[data-page='home'],
+body[data-page='lesson'],
+body[data-page='roster'] {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+body[data-page='home'] > .footer,
+body[data-page='lesson'] > .footer,
+body[data-page='roster'] > .footer {
+  margin-top: auto;
+}
+
+/* --- login and password: one centred card ---------------------------------- */
+/* Two rows rather than `place-items: center`, which would have centred the card
+   and the footer together as a stack. The card centres in the first row; the
+   footer keeps the full width so its border-top spans the window. */
+body[data-page='auth'] {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  justify-items: center;
+}
+body[data-page='auth'] .auth {
+  width: min(24rem, 100%);
+  align-self: center;
+  margin: 1.5rem 1rem;
+}
+body[data-page='auth'] > .footer {
+  width: 100%;
+}
+body[data-page='auth'] .auth h1 {
+  margin-bottom: 0.15rem;
+}
+body[data-page='auth'] form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 1rem;
+}
+body[data-page='auth'] form label {
+  margin-top: 0.6rem;
+}
+body[data-page='auth'] form button {
+  margin-top: 1.1rem;
+  height: 44px;
+}
+/* The bilingual second line on the login form — smaller and quieter than the
+   German, because it is the same string twice and not new information. */
+body[data-page='auth'] .en,
+body[data-page='auth'] [lang='en'] {
+  color: var(--faint);
+  font-weight: 400;
+}
+body[data-page='auth'] .brand-stack {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.1rem;
+}
+/* The handbook button on the one page with no top bar to hold it. Fixed to the
+   corner rather than dropped into the card: the card is a two-field form a
+   teacher fills in from a slip, and a second affordance inside it competes with
+   the field she is meant to be looking at. Scoped to `auth` on purpose — every
+   other page that gets the button has a top bar, and the day `password.html`
+   grows one this rule is already right for it. */
+body[data-page='auth'] .help-fab {
+  position: fixed;
+  top: 0.9rem;
+  right: 0.9rem;
+  z-index: 20;
+}
+
+/* --- home ------------------------------------------------------------------ */
+body[data-page='home'] h2 {
+  margin: 1.8rem 0 0.6rem;
+}
+
+/* --- lesson ---------------------------------------------------------------- */
+
+/* The detail dialog's button row. This was a `style=` attribute on the <nav>
+   until the CSP went in — an inline style needs `style-src 'unsafe-inline'`,
+   which is most of what a CSP is for. Scoped to the page rather than added to
+   the utility set on purpose: `.hstack` is shared by four pages and this
+   alignment is wanted by exactly one of them. */
+body[data-page='lesson'] .dialog-actions {
+  justify-content: flex-end;
+  margin-top: 0.8rem;
+}
+
+body[data-page='lesson'] .controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 1rem 0 1.2rem;
+}
+/* The two-column split in the student drill-down — Chalk §8's desktop pattern,
+   collapsing under ~820px via the flex-basis rather than a media query. */
+body[data-page='lesson'] .cols {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+body[data-page='lesson'] .cols > * {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+body[data-page='lesson'] #detail-body table {
+  margin-top: 0.6rem;
+}
+body[data-page='lesson'] pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+/* The last statement can be a 40-line script; one line of it is the signal and
+   the rest is noise until you open the student. Carried over from phase 4. */
+body[data-page='lesson'] td.sql pre {
+  max-height: 2.8em;
+  overflow: hidden;
+}
+
+/* --- roster ---------------------------------------------------------------- */
+body[data-page='roster'] section {
+  margin-top: 1.5rem;
+}
+/*
+   The three tables scroll inside themselves rather than pushing the page wide.
+
+   Chalk §8's rule is that wide content gets its own `overflow-x` and the body
+   never scrolls sideways, and the roster has always broken it: at 375 px the
+   document was already 714 px wide before phase 8 added a fifth action button,
+   and 852 px after. Widening it is what made anyone measure.
+
+   On the container rather than the table, because a `<table>` cannot be its own
+   scroll port — `overflow` on a table element does nothing. These three ids are
+   exactly the elements `roster.js` writes a `<table>` into; a fourth would need
+   adding here, which is the cost of not wrapping each one in a div in the
+   markup, and is cheaper than the div.
+*/
+body[data-page='roster'] #teachers,
+body[data-page='roster'] #classes,
+body[data-page='roster'] #roster {
+  overflow-x: auto;
+}
+body[data-page='roster'] textarea {
+  width: 100%;
+  min-height: 8rem;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  resize: vertical;
+}
+
+/* Credential slips. `@media print` is the whole point of this block: the slips
+   are printed on paper and handed out, so the screen styling is scaffolding and
+   the print styling is the product. §4bb is why the address on them matters. */
+.slips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+.slip {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  padding: 0.7rem 0.85rem;
+  background: var(--surface);
+}
+.slip dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-top: 0.35rem;
+}
+.slip dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+/* `.noprint`, one word — that is the spelling `roster.js` and roster.html
+   already use, and this rule is worth nothing if it does not match them. */
+@media print {
+  .topbar,
+  .footer,
+  .noprint {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  .slips {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .slip {
+    break-inside: avoid;
+  }
+}
+
+/* --- sql: the three-pane shell --------------------------------------------
+   Layout carried over from phase 3 unchanged in structure, restyled only.
+   **Every `min-height: 0` below is still load-bearing**: a grid child defaults
+   to `min-content`, so without them a long result grid pushes the editor off
+   the screen instead of scrolling inside its own pane. Phase 7 changed the
+   colours here, not the geometry.
+   ------------------------------------------------------------------------- */
+/* Three rows, not two: top bar, the panes, footer. The `1fr` in the middle is
+   the only row that flexes, so the footer costs the editor ~30px and nothing
+   scrolls that should not. */
+body[data-page='sql'] {
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+}
+/* Denser than elsewhere — this page is a tool and every row of it is spoken for. */
+body[data-page='sql'] > .footer {
+  padding: 0.35rem 0.7rem;
+  font-size: 11.5px;
+}
+body[data-page='sql'] main {
+  display: grid;
+  grid-template-columns: 17rem 1fr;
+  min-height: 0;
+}
+
+body[data-page='sql'] #browser {
+  overflow: auto;
+  padding: 0.7rem 0.75rem;
+  border-right: 1px solid var(--line);
+  background: var(--surface-2);
+}
+body[data-page='sql'] #browser h2 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+  margin: 0 0 0.5rem;
+}
+body[data-page='sql'] #browser summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 0.12rem 0;
+  border-radius: var(--r-sm);
+}
+body[data-page='sql'] #browser .table {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 0.12rem 0.3rem 0.12rem 0.95rem;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 400;
+  border-radius: var(--r-sm);
+  color: var(--ink);
+}
+body[data-page='sql'] #browser .table:hover {
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+}
+body[data-page='sql'] #browser .cols {
+  margin: 0 0 0.3rem 1.7rem;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+body[data-page='sql'] #browser .est {
+  color: var(--faint);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+body[data-page='sql'] #browser .empty {
+  color: var(--muted);
+  font-size: 13px;
+}
+/*
+   Disk usage, under the tree — the student's half of what the lesson view
+   already tells their teacher.
+
+   It scrolls with the tree rather than being pinned to the bottom of the pane.
+   Pinning wants `#browser` to become a grid with `overflow: auto` moved onto
+   `#tree`, and that is the one geometry on this page phase 7 had to check by
+   hand (§4pp) — not worth changing blind. A student's tree is two schemas long
+   and the line is on screen without it.
+
+   `#quota.bad` restates the global `.bad`, and dropping it would be a silent
+   no-op: the resting rule above is `body[data-page=…] #quota`, an id plus an
+   attribute, which out-specifies a bare class by a mile. The utility's *colour*
+   is what is being reused here, not its precedence.
+
+   `--muted` rather than the `--faint` this pane's other secondary text uses,
+   and the difference is measured rather than felt. On `--surface-2`, rasterised
+   in both modes: `--faint` is 2.75 (light) / 3.03 (dark) and `--muted` is
+   4.83 / 5.35, against WCAG AA's 4.5 for text this size. `.est` and the
+   `TABELLEN` heading can sit at `--faint` because they annotate something the
+   reader is already looking at; this line is the only thing on the page that
+   says the number, and a student who cannot read it learns about the quota the
+   old way. `.bad` measures 5.20 / 7.62 and needed no help.
+*/
+body[data-page='sql'] #quota {
+  margin: 0.7rem 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+body[data-page='sql'] #quota.bad {
+  color: var(--bad-ink);
+}
+
+body[data-page='sql'] #work {
+  display: grid;
+  grid-template-rows: auto minmax(8rem, 2fr) auto minmax(0, 3fr);
+  min-height: 0;
+}
+body[data-page='sql'] #toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+body[data-page='sql'] #toolbar .status {
+  font-size: 13px;
+  color: var(--muted);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+body[data-page='sql'] #editor {
+  overflow: hidden;
+  min-height: 0;
+}
+body[data-page='sql'] #resultsHead {
+  padding: 0.4rem 0.7rem;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  font-size: 13px;
+  color: var(--muted);
+}
+body[data-page='sql'] #results {
+  overflow: auto;
+  min-height: 0;
+}
+body[data-page='sql'] #results {
+  padding: 0.6rem 0.7rem;
+}
+body[data-page='sql'] .stmt {
+  margin-bottom: 1.1rem;
+}
+body[data-page='sql'] .stmt h3 {
+  font: 600 12px/1.3 var(--font-mono);
+  margin: 0 0 0.35rem;
+  color: var(--muted);
+}
+body[data-page='sql'] .stmt h3 span {
+  font-weight: 400;
+  color: var(--faint);
+}
+/* The result grid is a data surface, not a document: every cell mono, `pre` so
+   trailing spaces in a student's data are visible, and one hard column cap so a
+   single 4 kB text value cannot push the rest off screen. */
+body[data-page='sql'] #results table {
+  width: auto;
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+body[data-page='sql'] #results th,
+body[data-page='sql'] #results td {
+  border: 1px solid var(--line);
+  padding: 0.16rem 0.45rem;
+  text-align: left;
+  white-space: pre;
+  max-width: 26rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Opaque, not the translucent top bar treatment: rows scroll *under* this. */
+body[data-page='sql'] #results th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+  z-index: 1;
+}
+body[data-page='sql'] #results td.null {
+  color: var(--faint);
+  font-style: italic;
+  font-family: var(--font-ui);
+}
+body[data-page='sql'] .note {
+  margin: 0.2rem 0 0;
+  padding: 0;
+  border: none;
+  font-size: 12.5px;
+}
+
+/* The editor is the one place IBM Plex Mono is not decorative — Chalk §8 asks
+   for it by name for the SQL surface. */
+body[data-page='sql'] .cm-editor {
+  height: 100%;
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+body[data-page='sql'] .cm-scroller {
+  font-family: inherit;
+}
+
+/* ---------------------------------------------------------------------------
+   CodeMirror's own floating UI — the autocomplete popup and the search panel.
+   These are NOT covered by `inheritPageColours` in editor.entry.js, and that
+   omission was a real bug in dark mode rather than a cosmetic gap.
+
+   The mechanism is worth stating, because it is not obvious and it will recur
+   with any other CodeMirror surface added later: that theme sets the *editor*
+   to `color: inherit` so the text follows the page. CodeMirror's default theme
+   separately gives the tooltip its own **white** background, which no page
+   setting touches. In light mode the two agree by accident. In dark mode the
+   page ink is near-white, so the popup rendered white-on-white and the
+   completion list was effectively invisible.
+
+   Everything below therefore sets background and foreground *together* — a rule
+   that sets only one of them is how this happened in the first place.
+   --------------------------------------------------------------------------- */
+body[data-page='sql'] .cm-tooltip {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+body[data-page='sql'] .cm-tooltip-arrow::before,
+body[data-page='sql'] .cm-tooltip-arrow::after {
+  border-top-color: var(--line);
+  border-bottom-color: var(--line);
+}
+
+/* `.cm-tooltip.cm-tooltip-autocomplete`, both classes, and it is not redundant.
+   CodeMirror's own rule is `.ͼ1 .cm-tooltip.cm-tooltip-autocomplete > ul` —
+   three classes, and `ͼ1` is a scope class it generates, so a selector that
+   names only one of them loses on specificity and does so *silently*. This cost
+   a debugging round: `font-size` below applied fine (CodeMirror sets no
+   font-size here) while `font-family` was overridden, so the rule looked live.
+   **Check the computed value, not whether the rule appears to match.** */
+body[data-page='sql'] .cm-tooltip.cm-tooltip-autocomplete > ul {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  max-height: 16em;
+}
+body[data-page='sql'] .cm-tooltip-autocomplete > ul > li {
+  padding: 0.18rem 0.5rem;
+  color: var(--ink);
+  line-height: 1.5;
+}
+body[data-page='sql'] .cm-tooltip-autocomplete > ul > li[aria-selected] {
+  background: var(--accent);
+  /* White on the solid accent in both modes, as everywhere else the accent is
+     a fill — the solid does not shift between light and dark, so its text
+     must not either. */
+  color: #fff;
+}
+/* The matched substring. Weight rather than a second colour: on the selected
+   row the background is already the accent, so an accent-coloured match would
+   disappear into it. */
+body[data-page='sql'] .cm-completionMatchedText {
+  text-decoration: none;
+  font-weight: 700;
+}
+body[data-page='sql'] .cm-completionIcon {
+  color: var(--faint);
+  opacity: 1;
+  padding-right: 0.5rem;
+}
+body[data-page='sql'] li[aria-selected] .cm-completionIcon,
+body[data-page='sql'] li[aria-selected] .cm-completionDetail {
+  color: #fff;
+  opacity: 0.75;
+}
+body[data-page='sql'] .cm-completionDetail {
+  color: var(--faint);
+  font-style: normal;
+  font-size: 11.5px;
+}
+
+/* The search panel (Ctrl-F, from `basicSetup`) has the identical failure mode
+   and is fixed here for the same reason, before someone finds it in a lesson. */
+body[data-page='sql'] .cm-panels {
+  background: var(--surface-2);
+  color: var(--ink);
+  border-color: var(--line);
+}
+body[data-page='sql'] .cm-panel input,
+body[data-page='sql'] .cm-panel button {
+  font-size: 13px;
+}
+body[data-page='sql'] .cm-searchMatch {
+  background: var(--warn-tint);
+}
+body[data-page='sql'] .cm-searchMatch-selected {
+  background: var(--accent-tint);
+}
+
+/* ---------------------------------------------------------------------------
+   The failure pane.
+
+   Ported from sql.html's own stylesheet rather than rewritten, because the rules
+   below carry arguments that phase 7 has no new information about — the old file
+   even said so ("Phase 7 owns the colour; it should not have to undo this as
+   well"). What changed here is the colour and nothing else: `#b3261e` became
+   `--bad-ink`, which is the same intent with a dark mode.
+   --------------------------------------------------------------------------- */
+body[data-page='sql'] .error {
+  border-left: 3px solid var(--bad);
+  padding: 0.45rem 0.75rem;
+}
+body[data-page='sql'] .error:empty {
+  border: none;
+  padding: 0;
+}
+body[data-page='sql'] .error .msg {
+  color: var(--bad-ink);
+  font-weight: 600;
+  margin: 0;
+}
+/*
+  The explanation leads; the raw Postgres text stays underneath in full. It
+  inherits the text colour rather than the red — the border and the message
+  already say "error", and a red bold paragraph on top of them reads as shouting
+  at a beginner who is already stuck.
+
+  `.hint-de + .msg` is deliberately a sibling selector rather than a second class
+  on `.msg`: the raw message is *also* the only text when there is no hint (a
+  cancelled query, a 4xx from our own API), and shrinking it there would leave
+  those cases with nothing to read. `sql.js`'s `renderFailure` header records
+  that this rule is why the class keeps its now-inaccurate name.
+*/
+body[data-page='sql'] .error .hint-de {
+  margin: 0 0 0.4rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+/* Smaller, unbolded and monospaced is demotion enough. An `opacity` here too was
+   measurably worse: the red is already close to the contrast floor on a dark
+   background, and this is the line a student pastes into a search engine. */
+body[data-page='sql'] .error .hint-de + .msg {
+  font-weight: 400;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+}
+body[data-page='sql'] .error .hint-de code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 0 0.2em;
+  border-radius: var(--r-sm);
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+}
+body[data-page='sql'] .error dl {
+  margin: 0.45rem 0 0;
+  font-size: 13px;
+}
+body[data-page='sql'] .error dt {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--faint);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+body[data-page='sql'] .error dd {
+  margin: 0 0 0.35rem;
+}
+body[data-page='sql'] .error pre {
+  margin: 0.4rem 0 0;
+  font-size: 13px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+}
+
+/* ---------------------------------------------------------------------------
+   The CSV import dialog — and every other dialog in the app.
+
+   `max-height` plus the scrolling preview are what keep a 40-column file from
+   growing the dialog past the viewport, which would put the Import button
+   somewhere unreachable. Carried over from phase 3 with the colours swapped.
+
+   **Scoped to `dialog`, not to a page.** These rules were
+   `body[data-page='sql'] …` until phase 9 put the same import dialog on
+   `/uebungen` as well — at which point a page-scoped rule is a dialog that is
+   styled on one page and unstyled on the other, and the second one is whichever
+   nobody happened to open. What they describe is the dialog, so that is what
+   they select. `#importPreview` is the one id here, because it is the one part
+   that may legitimately be wider than its dialog.
+   --------------------------------------------------------------------------- */
+dialog {
+  max-width: min(56rem, 92vw);
+  max-height: 88dvh;
+  padding: 1rem 1.2rem;
+}
+dialog h2 {
+  font-size: 17px;
+  margin: 0 0 0.6rem;
+}
+dialog h3 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+  margin: 0.9rem 0 0.35rem;
+  font-weight: 600;
+}
+dialog .opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.1rem;
+  align-items: center;
+  font-size: 13.5px;
+}
+dialog input[type='text'],
+dialog select {
+  font-size: 13.5px;
+  padding: 0.18rem 0.4rem;
+  border-width: 1px;
+  border-radius: var(--r-sm);
+}
+/* `.cols` here is a <table>, not a flex container — see the note at the top. */
+dialog table.cols {
+  width: 100%;
+}
+dialog table.cols td.src {
+  font-family: var(--font-mono);
+  color: var(--muted);
+}
+dialog table.cols input[type='text'] {
+  width: 100%;
+  font-family: var(--font-mono);
+}
+/* The preview is the one part that may be wider than the dialog. */
+#importPreview {
+  overflow: auto;
+  max-height: 30vh;
+}
+dialog menu {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+dialog .error ul {
+  margin: 0.3rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 13px;
+}
+
+@media (max-width: 820px) {
+  body[data-page='sql'] main {
+    grid-template-columns: 1fr;
+  }
+  body[data-page='sql'] #browser {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Exercises — phase 9. Two surfaces: the `/uebungen` page, and the bar that
+   appears above the editor on `/sql?uebung=<id>`.
+
+   `.ex-task` is shared by both because it renders the same thing — the output
+   of `assets/markdown.js` — and a task that reads differently depending on
+   which page it is on is the sort of difference nobody notices until a student
+   asks why the code block is unreadable in one of them.
+   --------------------------------------------------------------------------- */
+body[data-page='exercises'] {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+body[data-page='exercises'] > .footer {
+  margin-top: auto;
+}
+
+/* The teacher's split: a narrow list beside the exercise being edited. Not a
+   fixed 260px — the list holds titles a teacher wrote, and a `minmax` lets a
+   long one push without breaking the layout. */
+.ex-split {
+  display: grid;
+  grid-template-columns: minmax(15rem, 20rem) 1fr;
+  gap: 1.1rem;
+  align-items: start;
+}
+.ex-list-head {
+  justify-content: space-between;
+}
+.ex-list-head h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.ex-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  min-width: 0; /* or a wide <pre> in a hand-in stretches the grid column */
+}
+
+/* One row in the teacher's list. A <button> rather than a link: it swaps the
+   pane beside it, it does not navigate. */
+.ex-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  width: 100%;
+  text-align: left;
+  border-color: transparent;
+  background: transparent;
+}
+.ex-item:hover {
+  background: var(--surface-2);
+  border-color: transparent;
+}
+.ex-item.sel {
+  background: var(--accent-tint);
+  border-color: transparent;
+  color: var(--accent-ink);
+}
+.ex-item-title {
+  font-weight: 600;
+}
+
+.ex-title {
+  flex: 1;
+  min-width: 12rem;
+  font-size: 17px;
+  font-weight: 600;
+}
+.ex-detail-head {
+  gap: 0.5rem;
+}
+
+/* The task editor beside its live preview. Below 900px they stack, because a
+   30-character-wide textarea is worse than a scroll. */
+.ex-task-edit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+label.block {
+  display: block;
+}
+label.block > span {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.ex-task-edit textarea,
+dialog textarea {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* Rendered task text. Tight margins: it sits inside a card on one page and
+   above the editor on the other, and default heading margins make both look
+   like a document that lost its page. */
+.ex-task {
+  font-size: 14px;
+  line-height: 1.55;
+}
+.ex-task > :first-child {
+  margin-top: 0;
+}
+.ex-task > :last-child {
+  margin-bottom: 0;
+}
+.ex-task h1,
+.ex-task h2,
+.ex-task h3,
+.ex-task h4,
+.ex-task h5,
+.ex-task h6 {
+  font-size: 15px;
+  margin: 0.9rem 0 0.35rem;
+}
+.ex-task p,
+.ex-task ul,
+.ex-task ol {
+  margin: 0.45rem 0;
+}
+.ex-task ul,
+.ex-task ol {
+  padding-left: 1.2rem;
+}
+.ex-task pre {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 0.5rem 0.7rem;
+  overflow-x: auto;
+}
+.ex-task code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+.ex-task pre code {
+  font-size: 12.5px;
+}
+
+.ex-card h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.ex-actions {
+  margin-top: 0.6rem;
+}
+
+/* One hand-in inside the review dialog. */
+.handin {
+  border-top: 1px solid var(--line);
+  padding-top: 0.7rem;
+  margin-top: 0.7rem;
+}
+.handin:first-child {
+  border-top: 0;
+  margin-top: 0;
+}
+.handin pre {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 0.5rem 0.7rem;
+  overflow-x: auto;
+  max-height: 40vh;
+  font-size: 12.5px;
+}
+#handinBody {
+  max-height: 60dvh;
+  overflow-y: auto;
+}
+
+/* The bar above the editor on /sql. Inside `#work`, so it shares that column's
+   width and does not disturb the schema pane beside it. */
+/**
+ * The bar is a **fifth child of a four-row grid**, and that is the whole reason
+ * this rule exists.
+ *
+ * `#work`'s `grid-template-rows` is positional — toolbar, editor, results
+ * heading, results — so inserting the bar in front of them shifted every one
+ * down a row: the toolbar took the editor's `minmax(8rem, 2fr)` and grew to
+ * eight rems, the editor took an `auto` row and collapsed to nothing, and the
+ * results fell out of the template into an implicit row. The page still *looked*
+ * plausible in a screenshot, which is why this was caught by measuring the
+ * editor's height rather than by looking at it.
+ *
+ * `:has()` rather than a static five-row template, because a static one cannot
+ * serve both cases: with the bar hidden it is not a grid item at all
+ * (`[hidden] { display: none !important }` above), so the four remaining
+ * children would take the first four rows and the editor would collapse on the
+ * ordinary page instead. The selector says exactly what it depends on — a bar
+ * that is present *and* not hidden.
+ */
+body[data-page='sql'] #work:has(> .ex-bar:not([hidden])) {
+  grid-template-rows: auto auto minmax(8rem, 2fr) auto minmax(0, 3fr);
+}
+
+body[data-page='sql'] .ex-bar {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r);
+  background: var(--surface);
+  padding: 0.5rem 0.7rem;
+  margin-bottom: 0.5rem;
+}
+/* 18vh, not more. The bar sits above the editor in a grid whose editor row has
+   an 8rem floor, so every pixel the task takes on a short screen comes straight
+   out of where the student types. The "Aufgabe" button collapses it entirely,
+   which is the answer for a long task — not a taller default. */
+body[data-page='sql'] .ex-bar .ex-task {
+  margin-top: 0.5rem;
+  max-height: 18vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+  .ex-split,
+  .ex-task-edit {
+    grid-template-columns: 1fr;
+  }
+}

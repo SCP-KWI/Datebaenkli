@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Datebänkli — Handbuch für Lehrpersonen</title>
+<meta name="description" content="Kurzanleitung für Datebänkli: eine echte PostgreSQL-Datenbank pro Lernende, im Browser, ohne Installation auf einem einzigen Gerät.">
+<style>
+{{FONTS}}
+
+/* ============================================================
+   Chalk design system — dieselben Tokens wie die App.
+   Akzent: Datebänkli-Violett, oklch(0.578 0.100 300).
+   ============================================================ */
+:root {
+  --bg: oklch(0.985 0.006 83);
+  --card: oklch(0.998 0.003 83);
+  --surface-2: oklch(0.955 0.008 83);
+  --border: oklch(0.912 0.010 83);
+  --border-strong: oklch(0.845 0.013 83);
+  --text: oklch(0.290 0.014 70);
+  --muted: oklch(0.520 0.012 70);
+  --faint: oklch(0.660 0.010 70);
+  --shadow: 0 1px 2px rgba(52,42,26,.05), 0 6px 20px rgba(52,42,26,.05);
+  --shadow-lg: 0 2px 4px rgba(52,42,26,.06), 0 18px 44px rgba(52,42,26,.10);
+
+  --primary: oklch(0.578 0.100 300);
+  --primary-dark: oklch(0.520 0.115 300);
+  --primary-tint: oklch(0.955 0.030 302);
+  --primary-ink: oklch(0.500 0.115 302);
+
+  --ok: oklch(0.475 0.098 152);
+  --ok-tint: oklch(0.955 0.030 155);
+  --ok-solid: oklch(0.705 0.088 152);
+  --warn: oklch(0.500 0.090 68);
+  --warn-tint: oklch(0.958 0.034 82);
+  --warn-solid: oklch(0.760 0.100 78);
+  --err: oklch(0.520 0.150 26);
+  --err-tint: oklch(0.955 0.032 30);
+
+  --r-sm: 9px;
+  --r: 12px;
+  --r-lg: 16px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: oklch(0.205 0.008 75);
+    --card: oklch(0.248 0.010 75);
+    --surface-2: oklch(0.292 0.011 75);
+    --border: oklch(0.335 0.012 75);
+    --border-strong: oklch(0.410 0.014 75);
+    --text: oklch(0.935 0.008 83);
+    --muted: oklch(0.705 0.011 80);
+    --faint: oklch(0.560 0.010 80);
+    --shadow: 0 1px 2px rgba(0,0,0,.30), 0 8px 24px rgba(0,0,0,.36);
+    --shadow-lg: 0 2px 6px rgba(0,0,0,.34), 0 22px 52px rgba(0,0,0,.48);
+    --primary-tint: oklch(0.345 0.052 300);
+    --primary-ink: oklch(0.832 0.092 302);
+    --ok: oklch(0.825 0.088 155);
+    --ok-tint: oklch(0.335 0.044 152);
+    --warn: oklch(0.840 0.088 82);
+    --warn-tint: oklch(0.350 0.046 78);
+    --err: oklch(0.820 0.110 30);
+    --err-tint: oklch(0.345 0.060 28);
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Source Sans 3", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 20px 96px; }
+
+/* ---- Kopf ---- */
+.masthead {
+  border-bottom: 1px solid var(--border);
+  padding: 40px 0 30px;
+  margin-bottom: 8px;
+}
+.brand { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; }
+.brand-badge {
+  width: 38px; height: 38px; border-radius: 11px;
+  background: var(--primary); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: none;
+}
+.brand-badge svg { width: 21px; height: 21px; }
+.brand-name { font-weight: 700; font-size: 1.15rem; letter-spacing: -.01em; }
+h1 {
+  font-size: clamp(2rem, 5vw, 2.7rem); font-weight: 700;
+  letter-spacing: -.028em; line-height: 1.12; margin: 0 0 14px;
+}
+.lede { font-size: 1.18rem; color: var(--muted); margin: 0; max-width: 60ch; }
+.meta {
+  margin-top: 22px; font-size: .85rem; color: var(--faint);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+/* ---- Inhaltsverzeichnis ---- */
+.toc {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 20px 24px; margin: 34px 0 8px;
+  box-shadow: var(--shadow);
+}
+.toc h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--faint); margin: 0 0 12px; font-weight: 700; }
+.toc ol { margin: 0; padding: 0; list-style: none;
+  columns: 2; column-gap: 32px; }
+.toc li { margin-bottom: 6px; break-inside: avoid; }
+.toc a { color: var(--text); text-decoration: none; font-weight: 600; font-size: .95rem; }
+.toc a:hover { color: var(--primary-ink); }
+.toc .num {
+  display: inline-block; width: 1.6em;
+  color: var(--faint); font-family: "IBM Plex Mono", monospace; font-size: .85rem;
+}
+@media (max-width: 620px) { .toc ol { columns: 1; } }
+
+/* ---- Typografie ---- */
+section { padding-top: 46px; }
+h2 {
+  font-size: 1.62rem; font-weight: 700; letter-spacing: -.02em;
+  margin: 0 0 6px; scroll-margin-top: 20px;
+}
+h2 .num {
+  font-family: "IBM Plex Mono", monospace; font-size: .78em;
+  color: var(--primary); margin-right: .5em; font-weight: 600;
+}
+h3 { font-size: 1.12rem; font-weight: 700; margin: 34px 0 8px; letter-spacing: -.01em; }
+.sub { color: var(--muted); margin: 0 0 22px; font-size: 1.02rem; }
+p { margin: 0 0 16px; }
+a { color: var(--primary-ink); text-decoration-color: color-mix(in oklab, var(--primary) 45%, transparent);
+  text-underline-offset: 2px; }
+a:hover { color: var(--primary); }
+strong { font-weight: 700; }
+ul, ol { margin: 0 0 16px; padding-left: 1.35em; }
+li { margin-bottom: 7px; }
+hr { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+code {
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .88em;
+  background: var(--surface-2); border-radius: 5px; padding: 1px 5px;
+  border: 1px solid var(--border); word-break: break-word;
+}
+kbd {
+  font-family: "IBM Plex Mono", monospace; font-size: .82em;
+  background: var(--surface-2); border: 1px solid var(--border-strong);
+  border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px; white-space: nowrap;
+}
+.ui {
+  font-weight: 600; background: var(--surface-2);
+  border-radius: 5px; padding: 1px 6px; font-size: .93em;
+  border: 1px solid var(--border);
+}
+
+/* ---- Boxen ---- */
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 22px 24px; box-shadow: var(--shadow);
+  margin: 22px 0;
+}
+.note {
+  border-left: 4px solid var(--primary); background: var(--primary-tint);
+  border-radius: var(--r); padding: 14px 18px; margin: 22px 0;
+}
+.note.warn { border-left-color: var(--warn-solid); background: var(--warn-tint); }
+.note.ok { border-left-color: var(--ok-solid); background: var(--ok-tint); }
+.note p:last-child { margin-bottom: 0; }
+.note .label {
+  display: block; font-size: .72rem; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--primary-ink); margin-bottom: 5px;
+}
+.note.warn .label { color: var(--warn); }
+.note.ok .label { color: var(--ok); }
+.note code { background: color-mix(in oklab, var(--card) 55%, transparent); }
+
+.quote {
+  font-family: "IBM Plex Mono", monospace; font-size: .86rem; line-height: 1.6;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 16px 18px; margin: 18px 0;
+  white-space: pre-wrap; overflow-x: auto;
+}
+
+/* ---- Ablauf-Kette ---- */
+.flow { display: grid; gap: 10px; margin: 26px 0 8px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.flow .step {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px 15px; box-shadow: var(--shadow);
+  position: relative;
+}
+.flow .step b { display: block; font-size: .95rem; margin-bottom: 3px; }
+.flow .step span { font-size: .85rem; color: var(--muted); line-height: 1.45; display: block; }
+.flow .step .i {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 999px; margin-bottom: 8px;
+  background: var(--primary); color: #fff;
+  font-size: .72rem; font-weight: 700; font-family: "IBM Plex Mono", monospace;
+}
+.flow .step.once .i { background: var(--ok-solid); }
+.flow .step.each .i { background: var(--warn-solid); }
+
+/* ---- Tabelle ---- */
+.tablewrap { overflow-x: auto; margin: 20px 0; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; min-width: 520px; }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border);
+  vertical-align: top; }
+th { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--faint); font-weight: 700; }
+tbody tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; }
+
+/* ---- Abbildungen ---- */
+figure { margin: 26px 0 30px; }
+.fig {
+  display: block; width: 100%; height: auto; margin: 24px 0 6px;
+  border-radius: var(--r-lg); border: 1px solid var(--border);
+  background: var(--card); box-shadow: var(--shadow-lg);
+  color: var(--primary-dark);
+}
+.fig--tablet { max-width: 660px; }
+.fig .hal { stroke: #fffdf8; stroke-width: 6; stroke-linecap: round; opacity: .92; fill: none; }
+.fig .arw { stroke: var(--primary-dark); stroke-width: 2.2; fill: none; }
+.fig .bdg { fill: var(--primary-dark); stroke: #fffdf8; stroke-width: 2.5; }
+.fig .bdgt {
+  fill: #fff; font-family: "IBM Plex Mono", monospace; font-size: 16px; font-weight: 600;
+  text-anchor: middle; dominant-baseline: middle;
+}
+figcaption { font-size: .88rem; color: var(--muted); margin-top: 12px; }
+
+/* nummerierte Legende zur Abbildung */
+.legend { list-style: none; padding: 0; margin: 14px 0 0; counter-reset: lg; }
+.legend li {
+  position: relative; padding-left: 34px; margin-bottom: 9px;
+  font-size: .95rem; line-height: 1.5;
+}
+.legend li::before {
+  counter-increment: lg; content: counter(lg);
+  position: absolute; left: 0; top: .12em;
+  width: 22px; height: 22px; border-radius: 999px;
+  background: var(--primary-dark); color: #fff;
+  font-family: "IBM Plex Mono", monospace; font-size: .74rem; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ---- FAQ ---- */
+details.faq {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 13px 18px; margin-bottom: 10px;
+  box-shadow: var(--shadow);
+}
+details.faq summary { cursor: pointer; font-weight: 600; list-style-position: outside; }
+details.faq summary::marker { color: var(--primary); }
+details.faq p { margin: 10px 0 2px; font-size: .96rem; }
+
+/* ---- Fuss ---- */
+footer {
+  margin-top: 66px; padding-top: 26px; border-top: 1px solid var(--border);
+  font-size: .9rem; color: var(--muted);
+}
+
+@media print {
+  body { font-size: 11pt; }
+  .toc, footer { break-inside: avoid; }
+  section { break-before: auto; }
+  figure { break-inside: avoid; }
+  .fig { box-shadow: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div class="brand">
+    <span class="brand-badge" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/>
+      </svg>
+    </span>
+    <span class="brand-name">Datebänkli</span>
+  </div>
+  <h1>Handbuch für Lehrpersonen</h1>
+  <p class="lede">Eine echte PostgreSQL-Datenbank pro Lernende — im Browser, ohne Installation auf einem einzigen Gerät. Du verteilst Zettel, die Klasse tippt SQL.</p>
+  <p class="meta">Stand: Juli 2026 · Version 0.8.1 · Fragen und Zugänge: philip.schaffner@kwi.ch</p>
+</header>
+
+<nav class="toc" aria-label="Inhalt">
+  <h2>Inhalt</h2>
+  <ol>
+    <li><span class="num">1</span><a href="#was">Wofür Datebänkli da ist</a></li>
+    <li><span class="num">2</span><a href="#ablauf">Der Ablauf in einem Bild</a></li>
+    <li><span class="num">3</span><a href="#anmelden">Zugang und Anmeldung</a></li>
+    <li><span class="num">4</span><a href="#klasse">Klasse anlegen</a></li>
+    <li><span class="num">5</span><a href="#lernende">Lernende erfassen</a></li>
+    <li><span class="num">6</span><a href="#zettel">Zugangszettel verteilen</a></li>
+    <li><span class="num">7</span><a href="#klassenliste">Die Klassenliste im Betrieb</a></li>
+    <li><span class="num">8</span><a href="#klasse-sieht">Was die Klasse sieht</a></li>
+    <li><span class="num">9</span><a href="#csv">Eigene Daten mitbringen (CSV)</a></li>
+    <li><span class="num">10</span><a href="#uebungen">Übungen verteilen und einsammeln</a></li>
+    <li><span class="num">11</span><a href="#lektion">Die Lektionsansicht</a></li>
+    <li><span class="num">12</span><a href="#grenzen">Grenzen und Sicherheit</a></li>
+    <li><span class="num">13</span><a href="#tipps">Tipps aus dem Alltag</a></li>
+    <li><span class="num">14</span><a href="#faq">Wenn etwas klemmt</a></li>
+  </ol>
+</nav>
+
+<!-- ==================================================================== -->
+<section id="was">
+<h2><span class="num">1</span>Wofür Datebänkli da ist</h2>
+<p class="sub">Kurz: eine echte Datenbank pro Kopf, ohne dass jemand etwas installieren muss.</p>
+
+<p>Die klassische SQL-Lektion beginnt damit, dass 22 Laptops eine Datenbank installieren sollen und 22-mal etwas anderes schiefgeht. Datebänkli nimmt diesen Teil weg. Jede Lernende bekommt ein eigenes Konto in einem PostgreSQL-Server, der bereits läuft — mit einem eigenen Bereich darin, in dem sie tun und lassen kann, was SQL erlaubt. Gebraucht werden ein Browser und ein Zettel mit Benutzername und Passwort.</p>
+
+<p>Wichtig ist das Wort <em>echt</em>: Das ist kein Simulator und kein Übungswerkzeug mit eingebauter Aufgabensammlung. Es ist PostgreSQL. Was in der Lektion funktioniert, funktioniert später auch anderswo — und was nicht funktioniert, meldet dieselbe Fehlermeldung wie überall sonst.</p>
+
+<h3>Für wen</h3>
+<p>Für Lehrpersonen, die Datenbanken unterrichten und dabei nicht auch noch Datenbankadministratorin sein wollen. Du musst nichts über Rollen, Schemas oder Berechtigungen wissen — das erledigt die App beim Anlegen einer Klasse. Was du wissen musst, steht in <a href="#grenzen">Abschnitt 12</a>, und es ist eine knappe Seite.</p>
+
+<h3>Typische Anwendungsfälle</h3>
+<ul>
+  <li><strong>Die Doppellektion SQL.</strong> Zettel verteilen, alle melden sich an, alle arbeiten an derselben Beispieldatenbank. Startzeit: etwa vier Minuten.</li>
+  <li><strong>Zuschauen, während gearbeitet wird.</strong> Die Lektionsansicht zeigt dir, wer welchen Befehl zuletzt ausgeführt hat und wie viele davon Fehler waren — inklusive der stillen Person, die seit zwanzig Minuten nichts getippt hat.</li>
+  <li><strong>Eigene Daten.</strong> Eine CSV-Datei — Umfrage, Notenexport, Kioskabrechnung — wird zur Tabelle, und die Klasse rechnet mit etwas, das sie selbst kennt.</li>
+  <li><strong>Kaputtmachen dürfen.</strong> Jede Person kann ihre eigene Datenbank mit einem Klick komplett zurücksetzen. Das ist ein Feature, kein Notausgang: Wer nichts kaputt machen darf, probiert nichts aus.</li>
+  <li><strong>Nachschauen, was passiert ist.</strong> Wenn jemand behauptet, «bei mir ging es nicht», steht der tatsächlich abgesetzte Befehl samt Fehlermeldung in der Lektionsansicht.</li>
+</ul>
+
+<h3>Was Datebänkli nicht ist</h3>
+<p>Keine Aufgabenverwaltung: Es gibt keine Übungen, keine automatische Korrektur und keine Abgaben. Aufgaben stellst du weiterhin auf dem Arbeitsblatt. Kein Notenprogramm. Kein Ersatz für ein Datenbankwerkzeug wie pgAdmin — das kann viel mehr und ist für eine erste Lektion viel zu viel. Und es ist keine Ablage für Daten, die wirklich schützenswert sind: Was in einer Lernendendatenbank landet, ist Übungsmaterial.</p>
+</section>
+
+<!-- ==================================================================== -->
+<section id="ablauf">
+<h2><span class="num">2</span>Der Ablauf in einem Bild</h2>
+<p class="sub">Damit klar ist, was einmalig ist und was in jeder Lektion passiert.</p>
+
+<div class="flow">
+  <div class="step once"><span class="i">1</span><b>Klasse anlegen</b><span>Kürzel, Name, Schuljahr. Einmal pro Klasse.</span></div>
+  <div class="step once"><span class="i">2</span><b>Namen einfügen</b><span>Liste aus Excel hineinkopieren, prüfen, anlegen.</span></div>
+  <div class="step once"><span class="i">3</span><b>Zettel drucken</b><span>Passwörter sind genau einmal sichtbar. Sofort drucken.</span></div>
+  <div class="step each"><span class="i">4</span><b>Die Klasse arbeitet</b><span>Anmelden, SQL tippen, Ergebnisse ansehen.</span></div>
+  <div class="step each"><span class="i">5</span><b>Du schaust zu</b><span>Lektionsansicht: wer ist dran, wo klemmt es.</span></div>
+</div>
+
+<p style="font-size:.86rem;color:var(--muted);margin-top:10px">Grün = einmal pro Klasse. Orange = jede Lektion.</p>
+
+<div class="note">
+  <span class="label">Drei Dinge, die es wert sind, gewusst zu werden</span>
+  <p><strong>Der Server trennt, nicht die App.</strong> Jede Lernende ist gegenüber PostgreSQL eine eigene Benutzerin mit eigenem Bereich. Fremde Tabellen zu lesen scheitert an der Datenbank selbst — auch dann, wenn jemand kreativ wird.<br>
+  <strong>Ein Passwort existiert genau einmal.</strong> Im Moment, in dem das Konto entsteht. Danach lässt es sich nur neu ausstellen, nicht nachschlagen (<a href="#zettel">Abschnitt 6</a>).<br>
+  <strong>Nichts wird automatisch gelöscht.</strong> Arbeit bleibt liegen, bis sie jemand bewusst wegräumt.</p>
+</div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="anmelden">
+<h2><span class="num">3</span>Zugang und Anmeldung</h2>
+<p class="sub">Es gibt keine Selbstregistrierung — Lehrpersonenkonten werden von Hand angelegt.</p>
+
+<h3>Zugang anfragen</h3>
+<p>Schreib eine Mail an <a href="mailto:philip.schaffner@kwi.ch?subject=Datebänkli%20—%20Zugang">philip.schaffner@kwi.ch</a> mit deinem Namen und deiner Schule. Zurück kommt ein Zugangszettel derselben Sorte, die du gleich an deine Klasse verteilst: Adresse, Benutzername, Startpasswort. Als Lehrperson musst du das Passwort bei der ersten Anmeldung ändern — die App führt dich dorthin, bevor sie irgendetwas anderes zeigt.</p>
+
+<p>Die Adresse lautet <a href="https://datebaenkli.schaffner.xyz">datebaenkli.schaffner.xyz</a>. Sie steht auch auf jedem Zettel, den du druckst.</p>
+
+<h3>Anmelden</h3>
+{{FIG:login}}
+<ol class="legend">
+  <li><strong>Benutzername.</strong> Keine E-Mail-Adresse, sondern ein kurzer Name wie <code>t_brunner</code> — dieselbe Zeichenkette, die später in SQL auftaucht. Für Lernende ist er nach demselben Muster gebaut: <code>u_i3a_buehler_nino</code>.</li>
+  <li><strong>Passwort</strong> vom Zettel.</li>
+  <li><span class="ui">Anmelden</span>. Die Sitzung hält 12 Stunden und verlängert sich bei jedem Klick — ein Schultag ist also abgedeckt, die Nacht nicht.</li>
+</ol>
+
+<p>Nach dem Anmelden landest du auf der Übersicht. Sie ist bewusst karg: Sie sagt, wer du bist und welche Klassen dir gehören, und schickt dich weiter.</p>
+
+{{FIG:uebersicht}}
+<ol class="legend">
+  <li><strong>Die ganze Navigation.</strong> <span class="ui">SQL-Editor</span> ist dein eigener Arbeitsbereich — du hast eine Datenbank wie alle anderen und kannst darin eine Lektion vorbereiten. <span class="ui">Übungen</span> führt zum Vorbereiten und Einsammeln von Übungen (<a href="#uebungen">Abschnitt 10</a>), <span class="ui">Lektion</span> ist die Live-Ansicht während des Unterrichts (<a href="#lektion">Abschnitt 11</a>), <span class="ui">Klassen</span> die Verwaltung. Ganz rechts das Auswahlfeld für Deutsch oder Englisch und der Schalter für helles oder dunkles Design. Beides gilt pro Konto und folgt dir aufs nächste Gerät. SQL-Schlüsselwörter bleiben in beiden Sprachen englisch — <code>SELECT</code> heisst überall <code>SELECT</code>.</li>
+  <li>Deine Klassen mit der Anzahl eingetragener Personen.</li>
+</ol>
+</section>
+
+<!-- ==================================================================== -->
+<section id="klasse">
+<h2><span class="num">4</span>Klasse anlegen</h2>
+<p class="sub">Reiter <span class="ui">Klassen</span>. Einmal pro Klasse und Schuljahr, dauert eine halbe Minute.</p>
+
+{{FIG:klasse}}
+<ol class="legend">
+  <li>Deine bestehenden Klassen. Ein Klick auf eine Zeile öffnet ihre Liste weiter unten.</li>
+  <li><strong>Kürzel.</strong> Zwei bis zwölf Kleinbuchstaben oder Ziffern, zum Beispiel <code>i3a</code>. Es steckt im Benutzernamen jeder Lernenden dieser Klasse und <strong>lässt sich später nicht mehr ändern</strong> — nimm also gleich das, was auf dem Stundenplan steht.</li>
+  <li><strong>Name.</strong> Frei wählbar, hier darf es lang sein: <em>Informatik 3a</em>.</li>
+  <li><strong>Schuljahr</strong> ist optional und dient nur dir. Es hilft, wenn im übernächsten Jahr wieder eine 3a existiert.</li>
+  <li><span class="ui">Anlegen</span>. Die Klasse taucht sofort in der Liste auf und ist gleich ausgewählt.</li>
+</ol>
+
+<div class="note warn">
+  <span class="label">Neues Schuljahr, neue Klasse</span>
+  <p>Leg für einen neuen Jahrgang eine neue Klasse an, statt die alte weiterzuverwenden. Das Kürzel ist in jedem Benutzernamen verbaut, und eine Klasse <code>i3a</code> mit den Lernenden von 2024 und 2026 nebeneinander ist genau die Sorte Unordnung, die man nachher nicht mehr auseinanderdividiert.</p>
+</div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="lernende">
+<h2><span class="num">5</span>Lernende erfassen</h2>
+<p class="sub">Namensliste hineinkopieren, prüfen, anlegen. Alle auf einmal.</p>
+
+<p>Klick in der Klassenliste auf die Klasse. Weiter unten erscheint ihr Abschnitt und darin <span class="ui">Lernende hinzufügen</span>.</p>
+
+{{FIG:lernende}}
+<ol class="legend">
+  <li><strong>Eine Person pro Zeile.</strong> Aus Excel kopierte Spalten funktionieren ebenfalls — Klasse markieren, kopieren, hier einfügen.</li>
+  <li><strong>Reihenfolge.</strong> Steht in deiner Liste <em>Nachname Vorname</em> oder <em>Vorname Nachname</em>? Stell es hier ein, statt die Liste umzusortieren.</li>
+  <li><strong>Die Vorschau ist der eigentliche Arbeitsschritt.</strong> Sie zeigt, wie die App jede Zeile aufgeteilt hat. Lies sie einmal durch: Bei mehrteiligen Nachnamen (<em>Da Silva Ricardo</em>) rät die App richtig, bei <strong>zwei Vornamen</strong> aber nicht — <em>Meier Anna Sophie</em> würde als Nachname «Meier Anna» gelesen. Deshalb das Komma: <code>Meier, Anna Sophie</code>. Das ist die einzige Regel, die man kennen muss.</li>
+  <li><span class="ui">Anlegen</span> legt alle auf einmal an. Entweder alle oder keine — eine kaputte Zeile lässt die ganze Liste stehen, statt eine halb importierte Klasse zu hinterlassen.</li>
+</ol>
+
+<div class="note warn">
+  <span class="label">Benutzernamen sind endgültig</span>
+  <p>Aus dem Namen wird der Benutzername, und der ist zugleich der Name des Datenbankbereichs dieser Person. Er lässt sich <strong>nie</strong> ändern. Eine falsch aufgeteilte Zeile heisst also: Person löschen und neu anlegen — solange sie noch nichts gemacht hat, ist das billig, nach drei Lektionen nicht mehr. Die halbe Minute für die Vorschau lohnt sich.</p>
+  <p>Umlaute werden umgeschrieben, nicht weggeworfen: aus <em>Nino Bühler</em> wird <code>u_i3a_buehler_nino</code>, aus <em>Deniz Öztürk</em> <code>u_i3a_oeztuerk_deniz</code>.</p>
+</div>
+
+<p>Eine bereits erfasste Person kommt nicht ein zweites Mal in dieselbe Klasse — die Vorschau meldet das, bevor du klickst. Doppeltes Einfügen derselben Liste ist damit harmlos.</p>
+</section>
+
+<!-- ==================================================================== -->
+<section id="zettel">
+<h2><span class="num">6</span>Zugangszettel verteilen</h2>
+<p class="sub">Der einzige Schritt dieses Handbuchs, bei dem Zögern etwas kostet.</p>
+
+<p>Sobald die Konten entstanden sind, zeigt die App die Zugangszettel — und das ist der einzige Moment, in dem die Passwörter existieren. Gespeichert wird nur eine Prüfsumme; nachschlagen kann sie niemand, auch die Administration nicht.</p>
+
+{{FIG:zettel}}
+<ol class="legend">
+  <li>Der Titel nennt die Klasse, für die diese Zettel gelten.</li>
+  <li><span class="ui">Drucken</span> öffnet den Druckdialog des Browsers. Kein Drucker in der Nähe? «Als PDF sichern» ist im selben Dialog und tut es auch — dann aber bitte ausdrucken und die Datei danach löschen.</li>
+  <li><span class="ui">Zettel sind gedruckt — schliessen</span> räumt die Ansicht weg. Erst klicken, wenn das Papier tatsächlich da ist.</li>
+  <li>Ein Zettel pro Person, zum Auseinanderschneiden. Die Adresse steht drauf, damit niemand sie abtippen muss.</li>
+  <li>Der <strong>Benutzername</strong> — derselbe Name, der später in SQL als Bereichsname auftaucht.</li>
+  <li>Das <strong>Passwort</strong>: drei Wörter und eine Zahl, durch Bindestriche getrennt. Absichtlich sprechbar, weil es in der ersten Lektion vier Mal falsch abgetippt wird.</li>
+</ol>
+
+<div class="note warn">
+  <span class="label">Wenn die Ansicht trotzdem verloren geht</span>
+  <p>Passiert: Tab geschlossen, Laptop zugeklappt, Beamer umgesteckt. Die Rettung heisst <span class="ui">Neue Zettel</span> in der Klassenliste und stellt neue Passwörter aus — aber nur für Personen, die sich <strong>noch nie</strong> angemeldet haben. Wer schon drin war, behält seinen Zugang; ein bereits ausgeteilter Zettel kann also nicht versehentlich entwertet werden. Genau deshalb ist der Knopf mitten in der Lektion gefahrlos zu drücken.</p>
+</div>
+
+<div class="note ok">
+  <span class="label">Die Klasse muss das Passwort nicht ändern</span>
+  <p>Lernende werden nicht dazu gezwungen — der Zettel <em>ist</em> der Zugang. Fünfzehnjährige in den ersten fünf Minuten der ersten Lektion ein Passwort erfinden zu lassen, kostet mehr Zeit, als es bringt. Wer trotzdem eines setzen will, findet <span class="ui">Passwort ändern</span> auf der Übersicht.</p>
+</div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="klassenliste">
+<h2><span class="num">7</span>Die Klassenliste im Betrieb</h2>
+<p class="sub">Was du im Verlauf des Semesters an einer Klasse tatsächlich anfasst.</p>
+
+{{FIG:klassenliste}}
+<ol class="legend">
+  <li>Der <strong>Benutzername</strong>. Praktisch zum Vorlesen, wenn sich jemand nicht anmelden kann.</li>
+  <li><strong>Erste Anmeldung.</strong> <em>noch nie</em> heisst: Diese Person war noch nicht drin. Das ist die Spalte, die den Zettel-Knopf unten erklärt — und in der zweiten Lektion die schnellste Antwort auf «wer hat seinen Zettel verloren». Daneben steht der Status; <em>aktiv</em> ist der Normalfall.</li>
+  <li><strong>Die vier Knöpfe pro Zeile</strong>, von links nach rechts:
+    <ul>
+      <li><span class="ui">Neuer Zettel</span> stellt für diese eine Person ein neues Passwort aus. Der alte Zettel gilt ab dann nicht mehr, und laufende Sitzungen werden beendet.</li>
+      <li><span class="ui">Archivieren</span> nimmt die Anmeldung weg und lässt <strong>alle Daten unangetastet</strong>. Für Abgänge, Auslandsemester, längere Absenzen. Aus dem Knopf wird dann <span class="ui">Aktivieren</span>, und der macht es rückgängig, ohne dass etwas fehlt.</li>
+      <li><span class="ui">Aus Klasse</span> nimmt die Person aus dieser Klasse, ohne ihr Konto anzurühren — für den Fall, dass jemand die Klasse wechselt. Aus der <em>letzten</em> Klasse entfernen geht nicht: Ein Konto ohne Klasse wäre für niemanden mehr erreichbar. Beim Wechsel also zuerst in die neue Klasse eintragen.</li>
+      <li><span class="ui">Löschen</span> ist endgültig. Die App legt vorher automatisch eine Sicherung der Daten an und entfernt danach Konto und Datenbankbereich. Schlägt die Sicherung fehl, wird nichts gelöscht.</li>
+    </ul>
+  </li>
+  <li><span class="ui">Neue Zettel für n Lernende ohne erste Anmeldung</span> — der Knopf aus <a href="#zettel">Abschnitt 6</a>. Er erscheint nur, solange es solche Personen gibt.</li>
+</ol>
+
+<div class="note">
+  <span class="label">Im Zweifel archivieren</span>
+  <p>Archivieren ist reversibel, Löschen nicht. Der einzige Grund zu löschen ist, dass die Daten wirklich weg sollen — und selbst dann liegt die Sicherung noch auf dem Server. Für alles andere: archivieren, und die Sache im Sommer nochmals anschauen.</p>
+</div>
+
+<p style="font-size:.92rem;color:var(--muted)">Nach einem Jahr ohne Anmeldung archiviert die App ein Lernendenkonto von selbst. Der Datenbankbereich bleibt dabei vollständig erhalten; ein Klick auf <span class="ui">Aktivieren</span> holt die Person zurück.</p>
+</section>
+
+<!-- ==================================================================== -->
+<section id="klasse-sieht">
+<h2><span class="num">8</span>Was die Klasse sieht</h2>
+<p class="sub">Damit du es in zwei Sätzen erklären kannst, statt es vorzuführen.</p>
+
+<p>Lernende haben im Wesentlichen eine einzige Seite. Links die Tabellen, oben rechts das Eingabefeld, unten rechts das Ergebnis. Es gibt nichts zu suchen und nichts einzustellen. Dazu kommt der Reiter <span class="ui">Übungen</span> — leer, solange du keine verteilt hast (<a href="#uebungen">Abschnitt 10</a>). Deine eigene Ansicht ist dieselbe Seite — du hast ebenfalls einen Arbeitsbereich, und dort kannst du eine Lektion vorbereiten.</p>
+
+{{FIG:editor}}
+<ol class="legend">
+  <li><strong>Der Tabellenbaum.</strong> Zuoberst der eigene Bereich, darunter <code>demo</code> mit der mitgelieferten Beispieldatenbank. Ein Klick auf eine Tabelle setzt <code>SELECT * … LIMIT 50</code> ins Feld und führt es aus — der schnellste Weg zu «was steht da überhaupt drin». In deinem Baum stehen zusätzlich die Bereiche deiner Lernenden; du darfst darin lesen, nicht schreiben.</li>
+  <li><strong>Der Speicherstand</strong> — wie viel der 50 MB belegt sind. Zum Vergleich: Die ganze Beispieldatenbank ist deutlich kleiner. Man muss sich anstrengen, um dort anzukommen (siehe <a href="#grenzen">Abschnitt 12</a>).</li>
+  <li><strong>Die Kopfzeile</strong> mit <span class="ui">CSV importieren</span> (<a href="#csv">Abschnitt 9</a>), <span class="ui">Datenbank zurücksetzen</span>, <span class="ui">Übungen</span>, dem Weg zurück zur Übersicht sowie Sprache und Design. Zurücksetzen löscht <strong>alle eigenen</strong> Tabellen und gibt einen leeren Bereich zurück — nur die eigenen, niemand kann damit jemand anderem etwas antun. Es kommt eine Rückfrage.</li>
+  <li><span class="ui">Ausführen</span>, oder <kbd>Strg</kbd> + <kbd>↵</kbd>, auf dem Mac <kbd>⌘</kbd> + <kbd>↵</kbd>. Daneben <span class="ui">Abbrechen</span> für den Moment, in dem jemand versehentlich alle Tabellen miteinander kombiniert hat, und rechts die Anzahl Anweisungen und die gebrauchte Zeit.</li>
+  <li><strong>Das Eingabefeld</strong> mit Farbhervorhebung und Vervollständigung. Vorgeschlagen wird nur, was diese Person auch lesen darf. Mehrere Befehle hintereinander sind erlaubt und ergeben mehrere Ergebnisse.</li>
+  <li><strong>Das Ergebnis</strong> als Tabelle. Gezeigt werden höchstens 1000 Zeilen; darüber steht, wie viele es insgesamt wären.</li>
+</ol>
+
+<h3>Fehlermeldungen, die man lesen kann</h3>
+<p>Der häufigste Moment einer SQL-Lektion ist der, in dem etwas nicht geht. PostgreSQL antwortet dabei präzise und auf Englisch, aber nicht unbedingt hilfreich. Datebänkli stellt eine Erklärung darüber — auf Deutsch, und wo möglich mit einem konkreten Vorschlag.</p>
+
+{{FIG:fehler}}
+<ol class="legend">
+  <li><strong>Die Erklärung.</strong> Der Vorschlag ist nicht geraten: Die App vergleicht mit den Tabellen, die diese Person tatsächlich hat. Sie schlägt lieber nichts vor, als etwas Falsches.</li>
+  <li><strong>Die Originalmeldung</strong> bleibt stehen. Das ist der Text, den man in eine Suchmaschine tippt, und er ist Teil dessen, was zu lernen ist.</li>
+  <li><strong>Stelle und Fehlercode.</strong> «Zeile 1, Zeichen 29» kommt direkt vom Server, ist also immer exakt. Der Code darunter ist der offizielle SQLSTATE; für Neugierige gibt es dazu eine <a href="https://www.postgresql.org/docs/17/errcodes-appendix.html">vollständige Liste</a>.</li>
+</ol>
+
+<p>Abgedeckt sind die rund zwanzig Fehler, die im Unterricht wirklich vorkommen: Tabelle gibt es nicht, Spalte gibt es nicht, Syntaxfehler, doppelter Schlüssel, fehlender <code>GROUP BY</code>, Text wo eine Zahl hingehört. Alles andere zeigt die Originalmeldung ohne Erklärung.</p>
+
+<div class="note">
+  <span class="label">Zum Nachschlagen</span>
+  <p>Die offizielle PostgreSQL-Dokumentation ist englisch, aber gut und für Fortgeschrittene die richtige Adresse: <a href="https://www.postgresql.org/docs/17/tutorial-sql.html">das SQL-Kapitel des Tutorials</a> und die <a href="https://www.postgresql.org/docs/17/sql-commands.html">Befehlsreferenz</a>.</p>
+</div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="csv">
+<h2><span class="num">9</span>Eigene Daten mitbringen (CSV)</h2>
+<p class="sub">Der Weg von der Excel-Tabelle zur Datenbanktabelle. Für dich wie für die Klasse gleich.</p>
+
+<p>Im SQL-Editor oben: <span class="ui">CSV importieren</span>. Die App liest die Datei, rät die Datentypen und zeigt eine Vorschau, bevor irgendetwas entsteht.</p>
+
+{{FIG:csv}}
+<ol class="legend">
+  <li><strong>Datei wählen.</strong> Höchstens 10 MB und 100 000 Zeilen — für Unterrichtsdaten reichlich.</li>
+  <li><strong>Tabellenname, Trennzeichen und zwei Schalter.</strong> Der Name kommt aus dem Dateinamen und ist änderbar. Das <strong>Trennzeichen</strong> ist die Stelle, an der es fast immer klemmt: Schweizer Excel schreibt Strichpunkte statt Kommas. Die App erkennt das meist selbst — stimmt die Vorschau unten nicht, stell es hier um.</li>
+  <li><strong>Die Datentypen sind der Unterricht.</strong> Was die App rät, ist ein Vorschlag: Ein PLZ-Feld will man vielleicht als Text und nicht als Zahl, weil führende Nullen sonst verschwinden. Wer das einmal von Hand korrigiert hat, hat verstanden, wozu Datentypen da sind.</li>
+  <li><strong>Vorschau</strong> der ersten Zeilen, so wie sie ankommen werden.</li>
+  <li><span class="ui">Importieren</span>. Danach steht die Tabelle links im Baum.</li>
+</ol>
+
+<div class="note ok">
+  <span class="label">Was die App mit Schweizer Dateien tut</span>
+  <p>Sie kennt den hiesigen Excel-Dialekt: Strichpunkt als Trennzeichen, <code>1'234.50</code> als Zahl, <code>31.12.2025</code> als Datum, und auch Dateien, die noch nicht in UTF-8 gespeichert sind. Datumsangaben mit Schrägstrich (<code>03/04/2025</code>) bleiben absichtlich Text — daraus geht nicht hervor, ob der 3. April oder der 4. März gemeint ist, und Raten wäre hier die schlechtere Antwort.</p>
+</div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="uebungen">
+<h2><span class="num">10</span>Übungen verteilen und einsammeln</h2>
+<p class="sub">Reiter <span class="ui">Übungen</span>. Tabellen vorbereiten, an eine Klasse geben, Lösungen zurückbekommen.</p>
+
+<p>Bis hierher hat jede Person eine leere Datenbank und die gemeinsamen Beispieldaten. Eine Übung ist das Dritte: ein Satz Tabellen, den du selbst zusammenstellst, mit einer Aufgabenstellung daneben — und <strong>jede Lernende bekommt eine eigene Kopie davon</strong>. Wer darin etwas löscht, löscht es nur bei sich.</p>
+
+<h3>Eine Übung bauen</h3>
+<ol class="legend">
+  <li><span class="ui">Neu</span> links. Titel eintragen und speichern.</li>
+  <li><strong>Die Aufgabenstellung</strong> schreibst du in <a href="https://commonmark.org/help/" target="_blank" rel="noopener">Markdown</a>: <code># Überschrift</code>, <code>**fett**</code>, Aufzählungen mit <code>-</code>, Code in schrägen Anführungszeichen (<code>`kunden`</code>). Rechts daneben siehst du beim Tippen, wie es bei der Klasse ankommt. Wer Markdown nicht kennt, schreibt einfach Text — das funktioniert auch.</li>
+  <li><strong>Tabellen hinzufügen</strong>, auf zwei Wegen und beliebig gemischt:
+    <ul>
+      <li><span class="ui">CSV hinzufügen</span> — derselbe Dialog wie in Kapitel 9, mit derselben Vorschau und denselben Datentypen.</li>
+      <li><span class="ui">SQL-Skript hinzufügen</span> — für alles, was eine CSV-Datei nicht ausdrückt: Primärschlüssel, Fremdschlüssel, <code>CHECK</code>-Bedingungen. Schreib die Tabellennamen <strong>ohne Schema</strong>, also <code>CREATE TABLE bestellungen (…)</code>; die Übung landet automatisch am richtigen Ort.</li>
+    </ul>
+    Mit den Pfeilen bestimmst du die Reihenfolge. Das ist wichtig, sobald eine Tabelle auf eine andere verweist: die verwiesene muss vorher stehen.</li>
+  <li><span class="ui">Tabellen aufbauen</span> unter <em>Selber ausprobieren</em>. Damit legst du dir die Übung im eigenen Bereich an und kannst sie <span class="ui">Im Editor öffnen</span>, bevor eine Klasse sie sieht.</li>
+</ol>
+
+<div class="note ok">
+  <span class="label">Probier die Übung einmal selbst aus</span>
+  <p>Es kostet zwei Klicks und ist der einzige Weg zu merken, dass im Skript ein Komma fehlt. Sonst merkt es die Klasse — fünfundzwanzigmal gleichzeitig, mitten in der Lektion.</p>
+</div>
+
+<h3>Verteilen</h3>
+<p>Unter <em>Verteilung</em> die Klasse wählen und <span class="ui">Verteilen</span>. Ab da steht die Übung bei den Lernenden im Reiter <span class="ui">Übungen</span>. Die Tabellen entstehen erst, wenn jemand die Übung zum ersten Mal öffnet — wer eine Woche später in die Klasse kommt, bekommt sie also ebenso.</p>
+
+<p>Die Tabelle zeigt dir pro Klasse, wie viele die Übung geöffnet und wie viele abgegeben haben.</p>
+
+<h3>Was die Klasse davon sieht</h3>
+<p>Im Reiter <span class="ui">Übungen</span> steht die Aufgabe; <span class="ui">Bearbeiten</span> führt in den SQL-Editor. Dort ist über dem Eingabefeld ein Balken mit dem Titel, der Aufgabenstellung zum Auf- und Zuklappen und drei Schaltflächen:</p>
+<ul>
+  <li><span class="ui">Tabellen zurücksetzen</span> stellt <em>nur</em> die Übung wieder her. Die eigene Datenbank bleibt unangetastet. Das ist der Grund, weshalb man in einer Übung gefahrlos alles kaputt machen darf.</li>
+  <li><span class="ui">Abgeben</span> schickt dir, was gerade im Editor steht, dazu wahlweise eine Notiz. <strong>Mehrfach abgeben ist vorgesehen</strong> — du siehst alle Versuche, nicht nur den letzten.</li>
+  <li><span class="ui">Eigene Datenbank</span> führt zurück in den normalen Editor.</li>
+</ul>
+
+<p>Im Tabellenbaum links erscheint die Übung als eigener Eintrag, beschriftet mit ihrem Titel. Ein <code>SELECT * FROM kunden;</code> ohne Schemaangabe meint dort <em>die Tabelle der Übung</em> — nicht eine gleichnamige aus der eigenen Datenbank.</p>
+
+<h3>Einsammeln</h3>
+<p><span class="ui">Abgaben ansehen</span> zeigt alle Abgaben der Klasse, nach Namen sortiert, mit Notiz und SQL. <span class="ui">Alle herunterladen</span> gibt dir eine einzelne <code>.sql</code>-Datei mit sämtlichen Abgaben, jede mit Name, Nummer und Zeitpunkt als Kommentar darüber — zum Durchlesen, Ausdrucken oder Ablegen. Einzelne Abgaben lassen sich auch einzeln herunterladen.</p>
+
+<div class="note warn">
+  <span class="label">Zurückziehen löscht die Arbeit der Klasse</span>
+  <p><span class="ui">Zurückziehen</span> nimmt die Übung aus der Klasse <strong>und löscht dabei die Übungstabellen aller Lernenden samt allen Abgaben</strong>. Das lässt sich nicht rückgängig machen, deshalb fragt die App zweimal und nennt beim zweiten Mal die Anzahl. Die eigenen Datenbanken der Lernenden sind nicht betroffen.</p>
+  <p>Wenn du eine Übung nur überarbeiten willst, musst du sie nicht zurückziehen: Änderungen an den Tabellen wirken sich auf alle aus, die die Übung <em>danach</em> zum ersten Mal öffnen oder zurücksetzen.</p>
+</div>
+
+<div class="note ok">
+  <span class="label">Grössen</span>
+  <p>Pro Tabelle höchstens 2 MB und 20 000 Zeilen, pro Übung höchstens 20 Tabellen oder Skripte — deutlich weniger als beim gewöhnlichen CSV-Import, und zwar mit Absicht: Eine Übung wird in <em>jede</em> Person der Klasse kopiert und zählt bei jeder gegen die 50 MB aus Kapitel 12.</p>
+</div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="lektion">
+<h2><span class="num">11</span>Die Lektionsansicht</h2>
+<p class="sub">Reiter <span class="ui">Lektion</span>. Aktualisiert sich von selbst, solange die Seite offen ist.</p>
+
+<p>Diese Seite beantwortet die Fragen, die man sonst durch Herumlaufen beantwortet: Ist die Klasse überhaupt drin? Woran arbeitet sie? Und wo hängt jemand fest, ohne sich zu melden?</p>
+
+{{FIG:lektion}}
+<ol class="legend">
+  <li><strong>Klasse und Zeitfenster.</strong> Du siehst nur deine eigenen Klassen. Das Zeitfenster — 30 Minuten, 90 Minuten oder 4 Stunden — bestimmt alle Zahlen rechts. <span class="ui">Jetzt aktualisieren</span> erzwingt eine sofortige Auffrischung; sonst passiert das von selbst.</li>
+  <li><strong>Sitzung.</strong> <em>angemeldet</em> heisst: gültige Sitzung. Nicht: sitzt am Platz. Ein Strich heisst dagegen zuverlässig, dass diese Person nicht drin ist.</li>
+  <li><strong>Der letzte Befehl</strong> jeder Person, gekürzt auf die erste Zeile. Rot mit Fehlercode, wenn er nicht funktioniert hat — hier ein <code>WEHRE</code> statt <code>WHERE</code>. Zwei rote Zeilen hintereinander sind die Aufforderung, hinzugehen.</li>
+  <li><strong>Befehle</strong> im Zeitfenster. Eine Null nach zwanzig Minuten sagt mehr als jede Umfrage in die Runde — hier bei zwei Personen, die sich noch gar nicht angemeldet haben.</li>
+  <li><strong>Speicher</strong>, daneben die Spalte <strong>Fehler</strong>. Fehler sind normal und kein Alarmzeichen; interessant ist das Verhältnis. Der Speicher steht dabei, weil ein volles Konto der einzige Grund ist, aus dem jemand plötzlich gar nichts mehr schreiben kann.</li>
+</ol>
+
+<h3>Eine Person im Detail</h3>
+<p>Ein Klick auf eine Zeile zeigt, was diese Person zuletzt getan hat.</p>
+
+{{FIG:detail}}
+<ol class="legend">
+  <li>Die <strong>letzten 50 Befehle</strong> im vollen Wortlaut, neueste zuoberst, mit Zeilenzahl und Dauer.</li>
+  <li>Fehlgeschlagene Befehle rot, mit Code und der Originalmeldung von PostgreSQL. Hier sieht man, ob jemand denselben Fehler zum fünften Mal macht — und welchen.</li>
+  <li>Die <strong>Tabellen</strong> dieser Person, mit ungefährer Zeilenzahl. Der Beleg dafür, dass die Aufgabe tatsächlich gelöst wurde, ohne dass jemand seinen Bildschirm drehen muss.</li>
+</ol>
+
+<div class="note">
+  <span class="label">Das ist kein heimliches Mitlesen</span>
+  <p>Sag der Klasse, dass es diese Ansicht gibt. Sie zeigt genau das, was ohnehin an die Datenbank geschickt wurde — Befehle, keine Tastenanschläge, keine Bildschirme, nichts ausserhalb von Datebänkli. Offen angekündigt ist sie ein Werkzeug; unangekündigt entdeckt wäre sie ein Vertrauensproblem.</p>
+</div>
+
+<h3>Auf dem Tablet</h3>
+<p>Die Lektionsansicht ist die einzige Seite, die man im Unterricht sinnvollerweise in der Hand hält. Auf einem Tablet passt die Tabelle vollständig aufs Bild.</p>
+
+{{FIG:tablet}}
+<ol class="legend">
+  <li>Dieselbe Klassenauswahl wie am Computer.</li>
+  <li>Derselbe rot markierte Fehler. Auf einem Handy funktioniert die Seite auch, dort muss die Tabelle allerdings seitlich geschoben werden.</li>
+</ol>
+</section>
+
+<!-- ==================================================================== -->
+<section id="grenzen">
+<h2><span class="num">12</span>Grenzen und Sicherheit</h2>
+<p class="sub">Was die Datenbank von sich aus verhindert — und was du davon wissen musst.</p>
+
+<p>Dieser Abschnitt ist die Antwort auf «kann da jemand etwas kaputt machen». Kurz: das eigene, ja, gerne. Alles andere nein, und zwar nicht, weil die App aufpasst, sondern weil PostgreSQL es nicht erlaubt.</p>
+
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Grenze</th><th>Wert</th><th>Was das im Unterricht heisst</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Speicher pro Person</td>
+      <td>50 MB</td>
+      <td>Wer darüber ist, kann weiterhin lesen, aber nichts mehr schreiben. Der Ausweg ist <code>DROP TABLE</code> oder <code>TRUNCATE</code> — <code>DELETE</code> gibt keinen Platz frei, was für sich schon eine gute Lektion ist.</td>
+    </tr>
+    <tr>
+      <td>Dauer einer Abfrage</td>
+      <td>etwa 15–20 Sekunden</td>
+      <td>Danach wird sie gestoppt. Reicht für alles, was im Unterricht sinnvoll ist, und beendet den versehentlichen Riesen-Join von selbst.</td>
+    </tr>
+    <tr>
+      <td>Angezeigte Zeilen</td>
+      <td>1000</td>
+      <td>Darüber steht «die ersten 1000 von …». Die Abfrage lief trotzdem vollständig.</td>
+    </tr>
+    <tr>
+      <td>Gleichzeitige Verbindungen</td>
+      <td>4 pro Person</td>
+      <td>Merkt niemand. Verhindert, dass eine offene Schlaufe den Server für die Klasse blockiert.</td>
+    </tr>
+    <tr>
+      <td>CSV-Import</td>
+      <td>10 MB / 100 000 Zeilen</td>
+      <td>Grösseres wird abgelehnt, bevor irgendetwas entsteht.</td>
+    </tr>
+    <tr>
+      <td>Tabellen einer Übung</td>
+      <td>2 MB / 20 000 Zeilen je Tabelle, 20 Tabellen je Übung</td>
+      <td>Knapper als beim gewöhnlichen Import, weil eine Übung in jede Person der Klasse kopiert wird und dort auf die 50 MB angerechnet wird.</td>
+    </tr>
+    <tr>
+      <td>Falsche Anmeldeversuche</td>
+      <td>10 pro Konto in 15 Min.</td>
+      <td>Danach eine Zwangspause. Wer sich fünfmal vertippt, kommt trotzdem durch.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Was du ignorieren darfst</h3>
+<p>Rollen, Schemas, Berechtigungen, Sicherungen: alles automatisch. Beim Anlegen einer Person entsteht ihr Konto und ihr Bereich, du bekommst Leserecht darauf, und beim Zurücksetzen wird dieses Leserecht korrekt neu vergeben. Du musst dafür nie ein SQL-Kommando schreiben. Falls dich der Aufbau doch interessiert, ist er in der Architekturdokumentation des Projekts beschrieben — für das Unterrichten ist er nicht nötig.</p>
+
+<h3>Was du wissen solltest</h3>
+<ul>
+  <li><strong>Du siehst die Datenbanken deiner Klasse, lesend.</strong> Im Tabellenbaum deines eigenen Editors erscheinen alle Bereiche deiner Lernenden, und <code>SELECT * FROM u_i3a_buehler_nino.pausenkiosk;</code> funktioniert. Schreiben kannst du dort nicht — und andere Lehrpersonen sehen deine Klassen gar nicht.</li>
+  <li><strong>Fremde Tabellen lesen geht nicht.</strong> Wer es versucht, bekommt eine Zugriffsverweigerung von PostgreSQL, nicht von der App. Das gilt auch für die Beispieldaten: <code>demo</code> darf gelesen, aber nicht verändert werden — der Versuch, die eigene schlechte Note dort wegzulöschen, scheitert also zuverlässig.</li>
+  <li><strong>Namen sind sichtbar, Daten nicht.</strong> Wer sucht, kann herausfinden, <em>dass</em> es andere Bereiche und Tabellen gibt. Lesen lässt sich darin keine einzige Zeile. Für den Unterricht ist das eher ein Anlass als ein Problem: Metadaten und Daten sind nicht dasselbe.</li>
+  <li><strong>Zwei, die sich einig sind, können zusammenarbeiten.</strong> Wer will, kann seinen eigenen Bereich für eine andere Person freigeben — es ist der eigene, und PostgreSQL erlaubt das dem Eigentümer. Die App nimmt solche Freigaben bei ihren Aufräumläufen wieder weg und protokolliert sie. Als Abschreibweg taugt es also schlecht, aber rechne im Zweifel damit, dass zwei, die sich einig sind, es kurzzeitig können.</li>
+  <li><strong>Die Beispieldaten sind nach Schweizer Regeln sortiert.</strong> <code>ORDER BY nachname</code> liefert Bühler, Küng, Rüegg an der richtigen Stelle statt hinter Zimmermann. Klingt nach einem Detail und ist die erste Abfrage, die eine Klasse ausführt.</li>
+</ul>
+
+<h3>Die Beispieldatenbank</h3>
+<p>Im Bereich <code>demo</code> liegen acht Tabellen mit Schweizer Bezug — Kantone, Gemeinden, Schülerinnen, Fächer, Noten, Artikel, Bestellungen, Bestellpositionen. Sie reichen für Verbunde, Gruppierungen, Unterabfragen und enthalten absichtlich eine verletzte Fremdschlüsselbeziehung, an der sich Integritätsbedingungen zeigen lassen. Lesbar für alle, veränderbar für niemanden.</p>
+</section>
+
+<!-- ==================================================================== -->
+<section id="tipps">
+<h2><span class="num">13</span>Tipps aus dem Alltag</h2>
+
+<ul>
+  <li><strong>Zettel eine Lektion früher drucken.</strong> Der Drucker im Lehrerzimmer weiss, wann du es eilig hast.</li>
+  <li><strong>Die Vorschau beim Anlegen wirklich lesen.</strong> Zwanzig Sekunden dort ersparen dir eine Person, die das ganze Semester <code>u_i3a_meieranna_sophie</code> heisst.</li>
+  <li><strong>Erste Lektion: nur <code>SELECT</code> auf <code>demo</code>.</strong> Der eigene Bereich ist leer, und ein leerer Bildschirm ist ein schlechter Einstieg. Ein Klick auf <code>kantone</code> im Baum liefert sofort etwas zu sehen.</li>
+  <li><strong>Fehler stehen lassen.</strong> Wenn in der Lektionsansicht dreimal derselbe Code auftaucht, ist das kein Betriebsunfall, sondern der Inhalt der nächsten fünf Minuten an der Wandtafel.</li>
+  <li><strong>«Zurücksetzen» ist ein Angebot, keine Drohung.</strong> Sag es früh. Wer weiss, dass man jederzeit von vorn anfangen kann, probiert <code>DROP TABLE</code> aus, statt sich davor zu fürchten.</li>
+  <li><strong>Eigene Daten schlagen Beispieldaten.</strong> Die Klasse rechnet lieber mit den Umsätzen des Pausenkiosks oder einer eigenen Umfrage als mit Kantonsflächen. Eine CSV-Datei reicht (<a href="#csv">Abschnitt 9</a>).</li>
+  <li><strong>Am Semesterende nichts tun.</strong> Es läuft nichts ab, es wird nichts gelöscht. Aufräumen kannst du im Sommer — oder gar nicht.</li>
+</ul>
+</section>
+
+<!-- ==================================================================== -->
+<section id="faq">
+<h2><span class="num">14</span>Wenn etwas klemmt</h2>
+
+<details class="faq">
+  <summary>Jemand hat den Zettel verloren.</summary>
+  <p>In der Klassenliste bei dieser Person auf <span class="ui">Neuer Zettel</span>. Es erscheint sofort ein neuer Zettel mit einem neuen Passwort; der alte gilt nicht mehr. Wenn gleich mehrere Zettel fehlen und die betroffenen Personen sich noch nie angemeldet haben, geht es mit einem Klick für alle auf einmal.</p>
+</details>
+
+<details class="faq">
+  <summary>Ich habe die Zettelansicht geschlossen, bevor gedruckt war.</summary>
+  <p>Solange sich niemand angemeldet hat, ist es folgenlos: <span class="ui">Neue Zettel für n Lernende ohne erste Anmeldung</span> stellt alle neu aus. Haben sich einzelne schon angemeldet, behalten die ihren Zugang, und der Knopf rührt sie nicht an.</p>
+</details>
+
+<details class="faq">
+  <summary>Eine Anmeldung geht nicht.</summary>
+  <p>Der Reihe nach: Benutzername ganz klein und mit Unterstrichen abgetippt? Passwort mit Bindestrichen, ohne Leerzeichen? Steht die Person in der Klassenliste auf <em>aktiv</em>, oder wurde bei ihr versehentlich <span class="ui">Archivieren</span> geklickt? Wenn alles stimmt: <span class="ui">Neuer Zettel</span>, das ist schneller als weiter zu suchen.</p>
+</details>
+
+<details class="faq">
+  <summary>Eine Abfrage hängt.</summary>
+  <p><span class="ui">Abbrechen</span> daneben stoppt sie. Passiert das nicht rechtzeitig, stoppt der Server sie nach etwa zwanzig Sekunden selbst. Danach ist alles wieder normal; es geht nichts kaputt und nichts verloren. Meist steckt ein Verbund ohne Bedingung dahinter — mehrere Tabellen im <code>FROM</code>, kein <code>JOIN … ON</code>.</p>
+</details>
+
+<details class="faq">
+  <summary>Jemand kann plötzlich nichts mehr speichern.</summary>
+  <p>Wahrscheinlich das Speicherlimit. In der Lektionsansicht steht es in der letzten Spalte. Der Ausweg ist <code>DROP TABLE</code> auf das, was nicht mehr gebraucht wird, oder <span class="ui">Datenbank zurücksetzen</span> für einen sauberen Start. <code>DELETE</code> hilft nicht — die Zeilen sind weg, der Platz nicht.</p>
+</details>
+
+<details class="faq">
+  <summary>Jemand hat seine ganze Datenbank gelöscht.</summary>
+  <p>Das ist erlaubt, und es ist kein Notfall — jede Person kann nur ihre eigene löschen. Wiederherstellen lässt sich das nicht; der Bereich ist ein Arbeitsplatz, kein Archiv. Wer eine Arbeit behalten will, kopiert die <code>CREATE TABLE</code>- und <code>INSERT</code>-Befehle in ein Dokument. Das ist übrigens die ehrlichste Version der Lektion «warum es Sicherungen gibt».</p>
+</details>
+
+<details class="faq">
+  <summary>Kann jemand die Daten einer anderen Person lesen?</summary>
+  <p>Nein. Der Versuch endet bei PostgreSQL selbst, nicht bei einer Prüfung in der App — das ist der Unterschied, der es belastbar macht. Sichtbar ist nur, <em>dass</em> es andere Bereiche gibt. Die einzige Ausnahme sind zwei Personen, die sich gegenseitig freischalten; das räumt die App wieder auf und schreibt es mit.</p>
+</details>
+
+<details class="faq">
+  <summary>Jemand verlässt die Klasse.</summary>
+  <p><span class="ui">Archivieren</span>, wenn die Arbeit erhalten bleiben soll — das ist der Normalfall und jederzeit umkehrbar. <span class="ui">Aus Klasse</span> nur beim Wechsel in eine andere Klasse, und dort zuerst eintragen. <span class="ui">Löschen</span> nur, wenn die Daten wirklich weg sollen.</p>
+</details>
+
+<details class="faq">
+  <summary>Die Oberfläche ist auf Englisch (oder soll es sein).</summary>
+  <p>Oben rechts das Auswahlfeld. Die Einstellung gilt pro Konto, nicht pro Gerät — sie folgt der Person also auf das nächste Gerät. Lernende können sie selbst umstellen; für eine Immersionsklasse macht das jede Person einmal für sich.</p>
+</details>
+
+<details class="faq">
+  <summary>Ich habe mein eigenes Passwort vergessen.</summary>
+  <p>Mail an <a href="mailto:philip.schaffner@kwi.ch?subject=Datebänkli%20—%20Passwort">philip.schaffner@kwi.ch</a>, du bekommst einen neuen Zugangszettel. Deine Klassen und alle Daten bleiben davon unberührt.</p>
+</details>
+
+<details class="faq">
+  <summary>Wo sind die Aufgaben?</summary>
+  <p>Es gibt keine. Datebänkli stellt die Umgebung, nicht den Auftrag — Aufgaben, Reihenfolge und Korrektur bleiben bei dir und deinem Arbeitsblatt. Was du als Kontrolle hast, ist die Lektionsansicht: Befehle und Tabellen jeder Person, in Echtzeit.</p>
+</details>
+</section>
+
+<footer>
+  <p><strong>Datebänkli</strong> — Zugänge, Fragen, Fehlermeldungen und Wünsche an <a href="mailto:philip.schaffner@kwi.ch">philip.schaffner@kwi.ch</a>.</p>
+  <p>Alle Namen, Klassen und Tabellen in diesem Handbuch sind erfunden. Der Pausenkiosk leider auch.</p>
+</footer>
+
+</div>
+</body>
+</html>

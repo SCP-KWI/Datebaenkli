@@ -1,0 +1,13 @@
+node_modules/
+package-lock.json
+check/
+
+# The PNG intermediates. shots/web/*.webp and shots/rects.json are checked in
+# on purpose, so `node build.mjs` alone rebuilds the handbook.
+shots/*.png
+
+# Slip passwords for the throwaway cluster. Harmless once it is gone, but this
+# repo is public and a file of plaintext passwords in it teaches the wrong
+# reflex. `demo_seed.mjs` writes it and only `shots.mjs`, in the same run,
+# reads it.
+shots/demo.json
